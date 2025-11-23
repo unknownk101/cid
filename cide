@@ -1,0 +1,1178 @@
+//2-WordCount.java
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+import java.io.IOException;
+
+public class WordCount {
+
+    public static class TokenizerMapper extends Mapper<Object, Text, Text, IntWritable> {
+        private final static IntWritable one = new IntWritable(1);
+        private Text word = new Text();
+
+        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            // Split the line into words using whitespace as the delixxmiter
+            String[] words = value.toString().split("\\s+");Downloads
+            for (String w : words) {
+                word.set(w);
+                context.write(word, one);
+            }
+        }
+    }
+
+    public static class IntSumReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+        private IntWritable result = new IntWritable();
+
+        public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+            int sum = 0;
+            for (IntWritable val : values) {
+                sum += val.get();
+            }
+            result.set(sum);
+            context.write(key, result);
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+        Job job = Job.getInstance(conf, "word count");
+        job.setJarByClass(WordCount.class);
+        job.setMapperClass(TokenizerMapper.class);
+        job.setCombinerClass(IntSumReducer.class);
+        job.setReducerClass(IntSumReducer.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(IntWritable.class);
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
+
+1.	hadoop com.sun.tools.javac.Main WordCount.java
+2.	jar cvf wordcount.jar WordCount*.class
+3.	echo "Hello Hadoop Hello World" > input.txt
+echo "This is a test file for WordCount example" >> input.txt echo "Hadoop MapReduce is fun!" >> input.txt
+4.	hadoop fs -mkdir -p /input/wcip
+5.	hadoop fs -copyFromLocal input.txt /input/wcip/
+6.	hadoop fs -rm -r /output
+7.	hadoop jar wordcount.jar WordCount /input/wcip /output
+8.	hadoop fs -ls /output
+9.	hadoop fs -cat /output/part-r-00000
+
+//3-Map.java
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+import java.io.IOException;
+
+public class Map extends org.apache.hadoop.mapreduce.Mapper<LongWritable, Text, Text, Text> {
+
+    @Override
+    public void map(LongWritable key, Text, value, Context context) throws IOException, InterruptedException {
+
+        Configuration conf = context.getConfiguration();
+        int m = Integer.parseInt(conf.get("m"));
+        int p = Integer.parseInt(conf.get("p"));
+        String line = value.toString();
+
+        // (M, i, j, Mij)
+        String[] indicesAndValue = line.split(",");
+        Text outputKey = new Text();
+        Text outputValue = new Text();
+        if (indicesAndValue[0].equals("M")) {
+            for (int k = 0; k < p; k++){
+                // outputKey.set(i, k)
+                outputKey.set(indicesAndValue[1] + "," + k);
+                // outputValue.set(M, j, Mij);
+                outputValue.set(indicesValue[0] + "," + indicesValue[2] + "," + indicesAndValue[3]);
+                context.write(outputKey, outputvalue);
+            }
+        
+        }
+
+        else{
+            // (N, j, k, Njk);
+            for (int i = 0; i < m; i++){
+                outputKey.set(i + "," + indicesAndValue[2]);
+                outputValue.set("N," + indicesAndValue[1] + "," + indicesAndValue[3]);
+                context.write(outputKye, outputValue);
+            }
+        }
+    }
+}
+
+Reduce.java
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Reducer;
+import java.io.IoException;
+import java.util.Hashmap;
+
+public class Reduce extends org.apache.hadoop.mapreduce.Reducer<Text, Text, Text, Text> {
+
+    @Override
+    public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException{
+        String[] value;
+        // key = (i, k)
+        // values = [(M/N, j V/W), ...]
+        HashMap<Integer, Float> hashA = new HashMap<Integer, Float>();
+        HashMap<Integer, Float> hashB = new HashMap<Integer, Float>();
+        
+        for (Text val: values){
+            value = val.toString().split(",");
+            if (value[0].equals("M")) {
+                hashA.put(Integer.parseInt(value[1]), Float.parseFloat(value[2])));
+            }
+            else {
+                hashB.put(Integer.parseInt(value[1]), Float.parseFloat(value[2])));
+            }
+        }
+        
+        int n = Integer.parseInt(context.getConfiguration().get("n"));
+        float result = 0.0f;
+        float m_ij;
+        float n_jk;
+
+        for (int j = 0; j < n; j ++) {
+            m_ij = hashA.containsKey(j) ? hashA.get(j) : 0.0f;
+            n_jk = hashB = containsKye(j) ? hashB.get(j) : 0.0f;
+            result += m_ij * n_jk;
+        }
+
+        if (result != 0.0f) {
+            context.write(null, new Text(key.toString() + "," + Float.toString(result)));
+        }
+    
+    }
+}
+
+MatrixMultiply.java
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.input.*;
+import org.apache.hadoop.mapreduce.lib.output.*;
+
+public class MatrixMultiply {
+
+    public static void main(String[] args) throws Exception {
+        
+        if (args.length != 2) {
+
+            System.err.println("Usage: Matrix Multiply <in_dir> <out_dir>");
+            System.exit(2);
+        }
+        Configuration conf = new Configuration();
+        
+        // M is an m x n Matrix; N is an n x p matrix
+        conf.set("m", "1000");
+        conf.set("n", "100");
+        conf.set("p", "1000");
+        
+        @SuppressWarnings("deprecation")
+        Job job = new Job(conf, "MatrixMultiply");
+        job.setJarByClass(MatrixMultiply.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+        job.setMapperClass(Map.class);
+        job.setReducerClass(Reduce.class);
+
+        job.setInputFormatClass(TextInputFormat.class);
+        job.setOutputFormatClass(TextOutputFormat.class);
+
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        job.waitForCompletion(true);
+        
+    }
+}
+
+//8-Hive
+1 — Prepare HDFS input directories & copy sample files
+# create HDFS input dir for students
+hadoop fs -mkdir -p /input/student
+
+# copy local student data file into HDFS
+hadoop fs -copyFromLocal /home/hadoop/hive_examples/student_data_all.txt /input/student
+
+# verify in HDFS (optional)
+hadoop fs -ls /input/student
+hadoop fs -cat /input/student/student_data_all.txt | head
+
+2 — Create database in Hive and staging (external) table
+
+Enter Hive CLI (hive) and run:
+
+-- create database
+CREATE DATABASE IF NOT EXISTS mydb;
+USE mydb;
+
+-- create external staging table pointing to HDFS data
+CREATE EXTERNAL TABLE IF NOT EXISTS mydb.student_info_all (
+  roll INT,
+  stfname STRING,
+  stlname STRING,
+  course STRING
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LOCATION '/input/student';
+
+3 — Create partitioned table (staging → partitioned target)
+-- create partitioned table (course as partition)
+CREATE TABLE IF NOT EXISTS mydb.student (
+  roll INT,
+  stfname STRING,
+  stlname STRING
+)
+PARTITIONED BY (course STRING)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ',';
+
+4 — Static partitioning (explicit partition values)
+
+Ensure the strict mode settings before static inserts:
+
+SET hive.exec.dynamic.partition=false;
+SET hive.exec.dynamic.partition.mode=strict;
+
+
+Insert rows for a specific partition (example: html, hadoop):
+
+-- insert into html partition
+INSERT OVERWRITE TABLE mydb.student PARTITION(course='html')
+SELECT roll, stfname, stlname FROM mydb.student_info_all WHERE course='html';
+
+-- insert into hadoop partition
+INSERT OVERWRITE TABLE mydb.student PARTITION(course='hadoop')
+SELECT roll, stfname, stlname FROM mydb.student_info_all WHERE course='hadoop';
+
+
+Verify table contents and partitions:
+
+SELECT * FROM mydb.student;
+SHOW PARTITIONS mydb.student;
+
+
+You can add a partition explicitly:
+
+ALTER TABLE mydb.student ADD PARTITION (course='python');
+SHOW PARTITIONS mydb.student;
+
+
+Drop partitions:
+
+ALTER TABLE mydb.student DROP PARTITION (course='PYTHON');
+ALTER TABLE mydb.student DROP PARTITION (course='hadoop');
+ALTER TABLE mydb.student DROP PARTITION (course='html');
+SHOW PARTITIONS mydb.student;
+DESC FORMATTED mydb.student;
+
+5 — Dynamic partitioning (auto-create partitions)
+
+Turn on dynamic partitioning and insert:
+
+SET hive.exec.dynamic.partition=true;
+SET hive.exec.dynamic.partition.mode=nonstrict;
+
+INSERT OVERWRITE TABLE mydb.student PARTITION(course)
+SELECT roll, stfname, stlname, course FROM mydb.student_info_all;
+
+
+Verify:
+
+SELECT * FROM mydb.student;
+SHOW PARTITIONS mydb.student;
+-- show a specific partition
+SHOW PARTITIONS mydb.student PARTITION (course='hadoop');
+
+6 — Hive built-in operators & functions (examples)
+
+Examples you can copy-paste:
+
+-- WHERE comparisons
+SELECT * FROM mydb.student_info_all WHERE roll > 10;
+SELECT * FROM mydb.student_info_all WHERE course = 'hadoop';
+
+-- string concat
+SELECT CONCAT(stfname, ' ', stlname) AS full_name FROM mydb.student_info_all;
+
+-- aggregation count
+SELECT COUNT(*) AS total_students FROM mydb.student_info_all;
+
+
+Add any other built-ins similarly (substr, upper, lower, regexp, cast, etc.).
+
+7 — Views and Indexes (create / drop)
+
+Create a sample view (employee example from doc — ensure mydb.employee exists):
+
+-- create view
+CREATE VIEW mydb.costly_employee_vw AS
+SELECT e.empfname, e.job, e.salary
+FROM mydb.employee e
+WHERE e.salary > 2000 AND e.job NOT LIKE 'M%';
+
+-- drop view
+DROP VIEW IF EXISTS mydb.costly_employee_vw;
+
+
+Create and drop index example:
+
+-- create index (compact index handler) - deferred rebuild
+CREATE INDEX index_emp ON TABLE mydb.employee (id)
+AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler'
+WITH DEFERRED REBUILD;
+
+-- show index (after using database)
+SHOW INDEX ON employee;
+
+-- drop the index
+DROP INDEX index_emp ON mydb.employee;
+
+
+(Note: index support and syntax may differ by Hive version — some Hive installations do not use indexes heavily.)
+
+8 — HiveQL: WHERE, ORDER BY, GROUP BY examples
+-- WHERE clause
+SELECT * FROM mydb.employee WHERE deptcode = 10;
+
+-- ORDER BY (global order) - sorts whole result (may require reducer=1)
+SELECT id, empfname, emplname, job, salary, deptcode FROM mydb.employee ORDER BY salary DESC;
+
+-- GROUP BY with aggregation
+SELECT deptcode, AVG(salary) AS avg_salary FROM mydb.employee GROUP BY deptcode;
+
+9 — Create external department table & joins example
+
+Prepare HDFS dept data and create table:
+
+# HDFS steps
+hadoop fs -mkdir -p /input/dept
+hadoop fs -copyFromLocal /home/hadoop/hive_examples/dept_data.txt /input/dept
+hadoop fs -cat /input/dept/dept_data.txt | head
+
+
+Create external table in Hive:
+
+CREATE EXTERNAL TABLE IF NOT EXISTS mydb.department (
+  deptcode INT,
+  deptname STRING,
+  location STRING
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LOCATION '/input/dept';
+
+SELECT * FROM mydb.department;
+
+
+Join examples:
+
+-- inner join
+SELECT e.empfname, e.deptcode, d.deptname, d.location
+FROM mydb.employee e
+INNER JOIN mydb.department d
+ON e.deptcode = d.deptcode;
+
+-- left join
+SELECT e.empfname, e.deptcode, d.deptname, d.location
+FROM mydb.employee e
+LEFT JOIN mydb.department d
+ON e.deptcode = d.deptcode;
+
+-- right join
+SELECT e.empfname, e.deptcode, d.deptname, d.location
+FROM mydb.employee e
+RIGHT JOIN mydb.department d
+ON e.deptcode = d.deptcode;
+
+-- full outer join (example with a subquery)
+SELECT e.empfname, e.deptcode, d.deptname, d.location
+FROM (SELECT empfname, deptcode FROM mydb.employee WHERE job = 'ANALYST') e
+FULL OUTER JOIN mydb.department d
+ON e.deptcode = d.deptcode;
+
+//9-Pig
+1. Start Pig Services
+pig
+
+2. Create HDFS directory structure
+hadoop fs -mkdir -p /input/pig
+hadoop fs -ls /input/pig
+
+3. Copy local files into HDFS
+
+(Adjust filename if your file is in downloads/home folder.)
+
+hadoop fs -copyFromLocal sample_student_data.txt /input/pig/
+hadoop fs -copyFromLocal interns_data.txt /input/pig/
+hadoop fs -ls /input/pig
+
+4. Start Pig Shell
+pig
+
+Q1 – Run the following Pig Commands
+A. Basic Load and Store Operations
+Load
+A = LOAD 'sample_student_data.txt'
+    USING PigStorage(',')
+    AS (id:chararray, fname:chararray, lname:chararray, age:int, phone:chararray, city:chararray);
+
+Store
+STORE A INTO 'sampleoutput' USING PigStorage('|');
+
+B. Diagnostic Operations
+Dump data
+DUMP A;
+
+Describe
+DESCRIBE A;
+
+Explain
+EXPLAIN A;
+
+C. Filtering
+B = FILTER A BY age > 22;
+
+
+Execution plan:
+
+EXPLAIN B;
+
+D. Projection (Selecting Columns)
+C = FOREACH B GENERATE id, fname, age, city;
+
+
+Illustrate:
+
+ILLUSTRATE C;
+
+E. Grouping Operations
+1. Group by city
+G = GROUP A BY city;
+DUMP G;
+DESCRIBE G;
+
+2. Group by multiple fields
+G1 = GROUP A BY (city, age);
+DUMP G1;
+
+3. Group all
+Ga = GROUP A ALL;
+DUMP Ga;
+
+F. Co-Group Operations
+Load second file
+I = LOAD 'interns_data.txt'
+    USING PigStorage(',')
+    AS (id:chararray, fname:chararray, age:int, city:chararray);
+
+Co-Group
+CG = COGROUP A BY age, I BY age;
+DUMP CG;
+
+G. Join Operations
+Load again for self join
+A1 = LOAD 'sample_student_data.txt'
+    USING PigStorage(',')
+    AS (id:chararray, fname:chararray, lname:chararray, age:int, phone:chararray, city:chararray);
+
+Self Join
+Self_Join = JOIN A BY age, A1 BY age;
+DUMP Self_Join;
+
+Inner Join
+Inner_Join = JOIN A BY city, I BY city;
+DUMP Inner_Join;
+
+Left Outer Join
+LEFT_Join = JOIN A BY city LEFT, I BY city;
+DUMP LEFT_Join;
+
+Right Outer Join
+Right_Join = JOIN A BY city RIGHT OUTER, I BY city;
+DUMP Right_Join;
+
+Full Outer Join
+Full_Join = JOIN A BY city FULL OUTER, I BY city;
+DUMP Full_Join;
+
+H. Cross Product
+cross_prod = CROSS A, I;
+DUMP cross_prod;
+
+I. Sorting
+Descending
+B = ORDER A BY id DESC;
+DUMP B;
+
+Limit 3
+c = LIMIT B 3;
+DUMP c;
+
+Ascending
+B = ORDER A BY id ASC;
+
+Limit 5
+c1 = LIMIT B 5;
+DUMP c1;
+
+J. Combining & Splitting
+Union
+Union_data = UNION c, c1;
+DUMP Union_data;
+
+Split
+SPLIT A INTO younger_students IF age < 23, older_students IF age >= 23;
+
+DUMP younger_students;
+DUMP older_students;
+
+K. Filtering and Distinct
+Filter city = Mumbai
+filter_city = FILTER A BY city == 'Mumbai';
+DUMP filter_city;
+
+Select only city column
+all_city = FOREACH A GENERATE city;
+DUMP all_city;
+
+Distinct cities
+distinct_cities = DISTINCT all_city;
+DUMP distinct_cities;
+
+L. Create & Run Pig Script File
+Create script file
+cat > citywise_avg_students_age.pig
+
+
+Paste inside:
+
+student_info = LOAD '/home/hadoop/pig_examples/sample_student_data.txt'
+                USING PigStorage(',')
+                AS (id:chararray, fname:chararray, lname:chararray, age:int, phone:chararray, city:chararray);
+
+citywise = GROUP student_info BY city;
+
+citywise_avg_age = FOREACH citywise GENERATE group, AVG(student_info.age);
+
+STORE citywise_avg_age INTO '/home/hadoop/pig_examples/city_avg_age1'
+      USING PigStorage('|');
+
+
+Press Ctrl + D to save.
+
+M. Run Pig Script in MapReduce Mode
+pig -x mr -f citywise_avg_students_age.pig
+
+Check Output
+hadoop fs -ls /home/hadoop/pig_examples/city_avg_age1
+hadoop fs -cat /home/hadoop/pig_examples/city_avg_age1/part-r-00000
+
+//10-Spark
+1. Start Hadoop DFS & YARN
+start-dfs.sh
+start-yarn.sh
+
+2. Check Spark History Server
+jps
+
+
+If history server not running:
+
+$SPARK_HOME/sbin/start-history-server.sh
+
+3. Start Spark Shell
+cd $SPARK_HOME/bin
+./spark-shell
+
+4. Start PySpark (for Spark SQL & DataFrame API)
+$SPARK_HOME/bin/pyspark
+
+5. Upload CSV file to HDFS
+
+(Example)
+
+hadoop fs -copyFromLocal drivers.csv /user/snigdha/pig/
+hadoop fs -ls /user/snigdha/pig/
+
+6. Load CSV into Spark DataFrame
+From HDFS
+mydf = spark.read.csv('/user/snigdha/pig/drivers.csv',
+                      header='true',
+                      inferSchema='true')
+
+From Local
+mydf = spark.read.csv('file:///home/hadoop/spark_examples/drivers.csv',
+                      header='true',
+                      inferSchema='true')
+
+7. Check Schema
+mydf.printSchema()
+
+8. Create Temporary SQL View
+mydf.createOrReplaceTempView('driver_data')
+
+9. Run Spark SQL
+mydf2 = spark.sql("SELECT * FROM driver_data")
+mydf2.show()
+
+10. Store Output as CSV
+To HDFS
+mydf2.write.options(header='True').csv("/user/sohan/output/spark_result_csv")
+
+To Local File System
+mydf2.write.options(header='True').csv("file:///home/hadoop/spark_examples/spark_result_csv")
+
+11. Working with JSON in Spark
+Load JSON File
+
+From HDFS
+
+df = spark.read.json("/user/sohan/input/people.json")
+
+
+From Local
+
+df = spark.read.json("file:///home/hadoop/spark_examples/people.json")
+
+12. Show JSON Data
+df.show()
+
+13. Print Schema
+df.printSchema()
+
+14. Select Single Column
+df.select("name").show()
+
+15. Select with Expression (age + 1)
+df.select(df['name'], df['age'] + 1).show()
+
+16. Filter Data (age > 21)
+df.filter(df['age'] > 21).show()
+
+17. Group By Age
+df.groupBy("age").count().show()
+
+18. Create SQL View & Run Query
+df.createOrReplaceTempView("people")
+sqlDF = spark.sql("SELECT * FROM people")
+sqlDF.show()
+
+//4-mongodb
+1. Start / Stop / Status of MongoDB service (Linux — systemd)
+# start MongoDB
+sudo systemctl start mongod
+
+# stop MongoDB
+sudo systemctl stop mongod
+
+# restart MongoDB
+sudo systemctl restart mongod
+
+# check status
+sudo systemctl status mongod
+
+# alternative older sysvinit command (if systemctl not available)
+sudo service mongod start
+sudo service mongod stop
+sudo service mongod status
+
+2. Open Mongo shell
+# modern shell (recommended)
+mongosh
+
+# older shell (if mongosh not installed)
+mongo
+
+3. Create / switch to a database
+
+(Inside mongosh / mongo prompt)
+
+-- Switch to (or create) database named "mydb"
+use mydb
+
+-- Confirm current DB
+db
+
+4. Insert 1 record into a collection
+-- Insert a single document into collection "students"
+db.students.insertOne({ name: "Amit", age: 16, state: "Uttar Pradesh", district: "Gorakhpur", phone: "9876543210" })
+
+-- Confirm insert
+db.students.findOne({ name: "Amit" })
+
+5. Insert many records (bulk insert)
+db.students.insertMany([
+  { name: "Ravi", age: 15, state: "Uttar Pradesh", district: "Gorakhpur", phone: "9000000001" },
+  { name: "Sonia", age: 17, state: "Maharashtra", district: "Pune", phone: "9000000002" },
+  { name: "Neha", age: 14, state: "Uttar Pradesh", district: "Lucknow", phone: "9000000003" }
+]);
+
+6. Delete a collection
+-- Drop the entire collection "students"
+db.students.drop();
+
+-- Verify collection gone
+show collections
+
+7. Import CSV file into a collection (from normal terminal)
+
+(Assumes CSV has header line with column names matching desired field names)
+
+# Example CSV path on local file system
+# sample file: /home/hadoop/mongo_examples/students.csv
+
+# Import CSV into mydb.students collection
+mongoimport --db mydb --collection students --type csv --headerline --file /home/hadoop/mongo_examples/students.csv
+
+# If connecting to a remote host or using authentication, add --host, --username, --password, --authenticationDatabase options as required.
+
+
+If the CSV should be treated as JSON-like input, convert or use --jsonArray with a JSON file.
+
+8. See the records inserted (find)
+-- show all (beware large collections)
+db.students.find();
+
+-- pretty print
+db.students.find().pretty();
+
+-- show 5 records
+db.students.find().limit(5);
+
+9. Display 5 records where state = "Uttar Pradesh"
+db.students.find({ state: "Uttar Pradesh" }).limit(5).pretty();
+
+10. Display 5 records where state = "Uttar Pradesh" and district = "Gorakhpur"
+db.students.find({ state: "Uttar Pradesh", district: "Gorakhpur" }).limit(5).pretty();
+
+11. Display state name and district where age > 14 (projection)
+-- Query with projection: show only state and district fields (1 = include, _id excluded)
+db.students.find({ age: { $gt: 14 } }, { state: 1, district: 1, _id: 0 }).pretty();
+
+12. Update records where state = "Uttar Pradesh" → change to "UP"
+-- Update multiple documents
+db.students.updateMany(
+  { state: "Uttar Pradesh" },
+  { $set: { state: "UP" } }
+);
+
+-- Verify change (show 5)
+db.students.find({ state: "UP" }).limit(5).pretty();
+
+13. Delete one record
+-- Delete a single matching document (first matched)
+db.students.deleteOne({ name: "Amit" });
+
+-- Or delete by ObjectId
+db.students.deleteOne({ _id: ObjectId("PUT_OBJECTID_HERE") });
+
+14. Export collection to JSON / CSV (normal terminal)
+# Export to JSON (one document per line)
+mongoexport --db mydb --collection students --out /home/hadoop/mongo_exports/students.json --jsonArray
+
+# Export to CSV (specify fields)
+mongoexport --db mydb --collection students --type=csv --fields name,age,state,district,phone --out /home/hadoop/mongo_exports/students.csv
+
+//5-analysis operation
+Q1. Find the customer with the highest overall profit. What is his/her profit ratio?
+Steps
+
+Open SuperstoreUS2015.xlsx dataset.
+
+Drag Orders sheet into the canvas to load it.
+
+Go to Sheet 1.
+
+Drag Customer Name → Rows.
+
+Drag Profit → Columns.
+
+Click Profit axis → Sort Descending to see the highest profit customer on top.
+
+To calculate Profit Ratio, create a Calculated Field:
+
+Calculated Field
+Profit Ratio = SUM([Profit]) / SUM([Sales])
+
+
+Steps:
+
+Go to Analysis → Create Calculated Field
+
+Enter formula above
+
+Name: Profit Ratio
+
+Drag Profit Ratio to Tooltip or Marks label
+
+Q2. Which state has the highest total Sales? What is the Sales amount?
+Steps
+
+Drag State/Province → Rows
+
+Drag Sales (SUM) → Columns
+
+Sort Sales in descending order
+
+The first row = state with highest sales + sales value
+
+Q3. Which customer segment has highest order quantity & average discount?
+Steps
+
+Drag Customer Segment → Rows
+
+Drag Quantity Ordered New → Columns
+
+Drag Discount → Columns (next to quantity)
+
+Answer
+
+Corporate segment has:
+
+Highest Order Quantity
+
+Highest Average Discount Rate
+
+Q4. Which Product Category has highest Sales? Which has worst Profit?
+Steps (Sales)
+
+Drag Product Category → Rows
+
+Drag Sales (Sum) → Columns
+
+Sort descending
+
+Result
+
+Technology → Highest Sales (~3,514,982)
+
+Steps (Profit)
+
+Replace Sales with Profit on Columns
+
+Sort ascending (for worst profit)
+
+Result
+
+Furniture → Worst Profit (~177,354 dollars)
+
+Q5. What was the Profit on Technology for the City: Boca Raton?
+Steps
+
+Use the same bar graph from Q4.
+
+Add City to Filters → Show Filter → Select Boca Raton.
+
+Add Product Category to Filters → Select Technology only.
+
+The resulting single bar displays Profit for Technology in Boca Raton.
+
+Q6. Which Product Department has the highest Shipping Costs?
+Steps
+
+Drag Product Category → Rows
+
+Drag Shipping Cost → Columns
+
+Sort descending
+
+The first item = Department with highest Shipping Cost (value also shown on chart).
+
+Q7. What was the shipping cost of Office Supplies → Xerox 1905 → Home Segment → Cambridge?
+Steps
+
+Add Filters:
+
+Product Category → choose Office Supplies
+
+Product Name → choose Xerox 1905
+
+Customer Segment → choose Home
+
+City → choose Cambridge
+
+Display Shipping Cost from the filtered record.
+
+Answer
+
+Shipping Cost = 9.54 dollars.
+
+//6-Preparing maps
+Q1. Prepare a Geographic Map to Show Sales in Each State
+Steps
+
+Connect to Superstore dataset.
+
+Drag Orders sheet into the canvas (join with People/User sheet if needed).
+
+Create Geographic Hierarchy
+
+Right-click Region → Hierarchy → Create Hierarchy.
+
+Name it Mapping Items → OK.
+
+Drag State under Region → then drag City, then Postal Code to complete the hierarchy.
+
+Build the Map
+
+Double-click Region → Tableau automatically creates a map.
+
+On Marks card, click + on Region to drill down if needed.
+
+Add Sales to Map
+
+Drag Sales → Color on Marks.
+
+Drag Sales → Label on Marks.
+
+Format sales labels
+
+Right-click Sales → Default Properties → Number Format.
+
+Set:
+
+Number (Custom)
+
+Decimal Places = 0
+
+Units = Thousands (K)
+
+This shows Sales per State on the geographic map.
+
+Q2. Show Profit Ratio of Each State as Tooltip on Map
+Create Profit Ratio
+
+Go to Analysis → Create Calculated Field:
+
+Profit Ratio = SUM([Profit]) / SUM([Sales])
+
+
+Press OK.
+
+Build visualization
+
+Drag State → Rows
+
+Drag Profit Ratio → Columns
+
+Drag Profit Ratio → Label on Marks (or Tooltip)
+
+The map now shows Profit Ratio per State.
+
+Q3. Show Profit Ratio for Grip Envelop Products
+Steps
+
+Drag Product Name → Rows
+
+Drag Profit Ratio (calculated field) → Columns
+
+Add Product Name filter → select Grip Envelop
+
+Apply → OK
+
+Result
+
+Profit Ratio for Grip Envelop = 0.1310
+
+Q4. In Technology Category, Which Unprofitable State is Surrounded by Only Profitable States?
+Steps
+
+Drag Product Category → Filters → select Technology
+
+Drag Profit → Color on Marks
+
+Drag Profit → Label on Marks
+
+Observe state-level profit coloring
+
+Result
+
+Nevada is the unprofitable state surrounded by profitable states.
+
+Q5. Which State Has the Worst Gross Profit Ratio on Envelopes in the Corporate Segment Shipped in 2012?
+Steps
+
+Drag State → Rows
+
+Apply filters:
+
+Product Sub-Category → Envelopes
+
+Customer Segment → Corporate
+
+Order Date (Year) → 2012
+
+Drag Profit Ratio → Columns
+
+Drag Profit Ratio → Color on Marks
+
+Identify the lowest value.
+
+Answer
+
+South Carolina has the worst Gross Profit Ratio.
+
+//7-preparing reports
+1. Report: Product Category-wise Sales
+Steps
+
+Drag Product Category → Rows
+
+Drag Sales → Text on Marks
+
+Click Text on Marks → Show Mark Labels
+
+Drag Product Category → Color on Marks
+
+This creates a report showing Sales for each Product Category.
+
+2. Report: Region-wise Product Category Sales
+Steps
+
+Drag Region → Columns
+
+Drag Product Category → Rows
+
+Drag Sales → Text on Marks
+
+This shows a matrix of Sales across Region × Category.
+
+3. Report: State-wise Sales
+Steps
+
+Drag State/Province → Rows
+
+Drag Sales → Columns
+
+Click Text on Marks → Show Mark Labels
+
+Drag State/Province → Color on Marks
+
+This shows Sales per State.
+
+4. Percent of Total Sales for ‘Home Office’ Segment in July 2013
+Steps
+
+Drag Customer Segment → Rows
+
+Drag Sales → Text on Marks
+
+Add Order Date Filter
+
+Drag Order Date → Filters
+
+Choose Years → select 2013 → Apply → OK
+
+Change Sales to Quick Table Calculation → Percent of Total
+
+Result
+
+Percent of total Sales for Home Office in July 2013 = 21.65%
+
+5. Top 10 Product Names by Sales Within Each Region (Central & West), Year 2015
+
+(And find which product is ranked #2 in both regions)
+
+Steps
+A. Set up main view
+
+Drag Product Name → Rows
+
+Drag Order Date → Filters → choose Year → select 2015
+
+Drag Region → Filters → select Central and West
+
+Drag Region again → Columns
+
+Drag Sales → Text on Marks
+
+B. Apply Top 10 Filter
+
+Drag Product Name → Filters
+
+In the window → select Top tab
+
+Choose By Field → Top 10 by SUM(Sales) → OK
+
+C. Add Ranking
+
+Right-click SUM(Sales) →
+Quick Table Calculation → Rank
+
+Change addressing:
+Compute Using → Table Down
+
+Now each region (Central & West) shows Top 10 products ranked by Sales.
+
+Question
+
+Which product is ranked #2 in both Central & West?
+
+→ Identify product with Rank = 2 in both columns.
+
+(Your file does not specify the product name; you see it in Tableau after ranking.)
+
+//1-h c
+1. start-all.sh
+Starts all Hadoop daemons: NameNode, DataNode, ResourceManager, NodeManager.
+Expected: All Hadoop services start successfully.
+
+2. jps
+Lists all Java processes related to Hadoop.
+Expected: Shows NameNode, DataNode, SecondaryNameNode, ResourceManager, NodeManager, etc.
+
+3. hadoop version
+Shows Hadoop version and build information.
+Expected: Displays installed Hadoop version.
+
+4. hadoop fs -ls /
+Lists files/directories in the HDFS root.
+Expected: Outputs the contents of /.
+
+5. hadoop fs -mkdir /abc
+Creates directory /abc in HDFS.
+Expected: /abc directory created.
+
+6. hadoop fs -mkdir -p /abc
+Creates directory only if not already present.
+Expected: No error, even if /abc already exists.
+
+7. hadoop fs -touchz /abc/sies.txt
+Creates an empty file sies.txt in /abc.
+Expected: File gets created.
+
+8. gedit sies.txt
+Opens local file in text editor (not an HDFS command).
+Expected: File opens for editing.
+
+9. hadoop fs -copyFromLocal abc.txt /abc/abc1.txt
+Copies local abc.txt to HDFS as abc1.txt.
+Expected: /abc/abc1.txt created in HDFS.
+
+10. hadoop fs -cat /abc/abc1.txt
+Displays the content of abc1.txt.
+Expected: Text inside the file is shown.
+
+11. hadoop fs -put abc.txt /abc/abc2.txt
+Uploads abc.txt to HDFS as abc2.txt.
+Expected: /abc/abc2.txt created.
+
+12. hadoop fs -appendToFile abc.txt sies.txt check.txt
+Appends the contents of sies.txt into abc.txt and writes as check.txt.
+Expected: New file check.txt created with combined content.
+
+13. hadoop fs -usage ls
+Shows the usage guide for the ls command.
+Expected: Syntax and options for Hadoop ls command displayed.
