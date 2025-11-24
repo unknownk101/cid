@@ -441,6 +441,98 @@ public interface DateInterface extends Remote {
 ```
 
 
+# Formula-Datagram
+
+# EqServer.java
+```java
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+
+public class EqServer {
+    public static void main(String[] args) {
+        try {
+            DatagramSocket ds = new DatagramSocket(1234);
+            System.out.println("Server Started... Waiting for data...");
+
+            byte[] receiveData = new byte[1024];
+            byte[] sendData;
+
+            while (true) {
+                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                ds.receive(receivePacket);
+
+                String input = new String(receivePacket.getData(), 0, receivePacket.getLength());
+                System.out.println("Received: " + input);
+
+                // Extract a and b
+                String[] values = input.split(" ");
+                int a = Integer.parseInt(values[0]);
+                int b = Integer.parseInt(values[1]);
+
+                // Equation (a–b)² = a² – 2ab + b²
+                int result = (a * a) - (2 * a * b) + (b * b);
+
+                String output = "Result = " + result;
+                sendData = output.getBytes();
+
+                DatagramPacket sendPacket = new DatagramPacket(
+                        sendData, sendData.length,
+                        receivePacket.getAddress(),
+                        receivePacket.getPort()
+                );
+                ds.send(sendPacket);
+                System.out.println("Sent: " + output);
+            }
+        } catch (Exception e) {
+            System.out.println("Server Error: " + e);
+        }
+    }
+}
+
+```
+
+# EqClient.java
+```java
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.util.Scanner;
+
+public class EqClient {
+    public static void main(String[] args) {
+        try {
+            DatagramSocket ds = new DatagramSocket();
+            InetAddress ip = InetAddress.getByName("localhost");
+
+            Scanner sc = new Scanner(System.in);
+            System.out.print("Enter value of a: ");
+            int a = sc.nextInt();
+
+            System.out.print("Enter value of b: ");
+            int b = sc.nextInt();
+
+            String msg = a + " " + b;
+            byte[] sendData = msg.getBytes();
+
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, ip, 1234);
+            ds.send(sendPacket);
+
+            byte[] receiveData = new byte[1024];
+            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+            ds.receive(receivePacket);
+
+            String output = new String(receivePacket.getData(), 0, receivePacket.getLength());
+            System.out.println("Server Response: " + output);
+
+        } catch (Exception e) {
+            System.out.println("Client Error: " + e);
+        }
+    }
+}
+
+```
+
+
 # 4-RMI-Library
 
 # Bill.java
@@ -950,6 +1042,642 @@ Process 2 is the new Coordinator!
 Enter choice: 2
 Enter process id to fail: 2
 Process 2 has failed.
+```
+
+
+# ChatApp
+
+# ChatServer.java
+```java
+import java.io.*;
+import java.net.*;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
+
+public class ChatServer {
+    private static final int PORT = 12345;
+    // thread-safe set
+    private static Set<ClientHandler> clientHandlers = new CopyOnWriteArraySet<>();
+
+    public static void main(String[] args) {
+        System.out.println("Chat Server starting on port " + PORT);
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("New client connected: " + clientSocket.getRemoteSocketAddress());
+                ClientHandler handler = new ClientHandler(clientSocket);
+                clientHandlers.add(handler);
+                new Thread(handler).start();
+            }
+        } catch (IOException e) {
+            System.err.println("Server Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    static void broadcast(String message, ClientHandler sender) {
+        for (ClientHandler client : clientHandlers) {
+            if (client != sender) {
+                client.sendMessage(message);
+            }
+        }
+    }
+
+    static class ClientHandler implements Runnable {
+        private Socket socket;
+        private PrintWriter out;
+        private BufferedReader in;
+        private String name = "Anonymous";
+
+        ClientHandler(Socket socket) {
+            this.socket = socket;
+        }
+
+        public void run() {
+            try {
+                out = new PrintWriter(socket.getOutputStream(), true);
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+                // Ask for a name
+                out.println("Enter your name:");
+                String inputName = in.readLine();
+                if (inputName != null && !inputName.trim().isEmpty()) {
+                    name = inputName.trim();
+                }
+                System.out.println(name + " joined the chat.");
+                broadcast(name + " has joined the chat.", this);
+
+                String msg;
+                while ((msg = in.readLine()) != null) {
+                    String formatted = name + ": " + msg;
+                    System.out.println("Received: " + formatted);
+                    broadcast(formatted, this);
+                }
+            } catch (IOException e) {
+                System.out.println("Connection error for " + name + ": " + e.getMessage());
+            } finally {
+                // cleanup
+                clientHandlers.remove(this);
+                broadcast(name + " has left the chat.", this);
+                try {
+                    if (in != null) in.close();
+                    if (out != null) out.close();
+                    if (socket != null && !socket.isClosed()) socket.close();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+                System.out.println(name + " disconnected.");
+            }
+        }
+
+        void sendMessage(String message) {
+            if (out != null) out.println(message);
+        }
+
+        @Override
+        public int hashCode() {
+            return socket.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof ClientHandler)) return false;
+            ClientHandler other = (ClientHandler) o;
+            return this.socket.equals(other.socket);
+        }
+    }
+}
+
+```
+
+# ChatClient.java
+```java
+import java.io.*;
+import java.net.*;
+
+public class ChatClient {
+    private static String SERVER = "localhost";
+    private static final int PORT = 12345;
+
+    public static void main(String[] args) {
+        if (args.length >= 1) SERVER = args[0]; // optional server IP argument
+
+        try (Socket socket = new Socket(SERVER, PORT);
+             BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+            // Thread to receive messages from server
+            Thread reader = new Thread(() -> {
+                try {
+                    String serverMsg;
+                    while ((serverMsg = in.readLine()) != null) {
+                        System.out.println(serverMsg);
+                    }
+                } catch (IOException e) {
+                    System.out.println("Connection closed.");
+                }
+            });
+            reader.setDaemon(true);
+            reader.start();
+
+            // First lines: server may ask for name
+            // If server asks "Enter your name:", display it and read name from user
+            // Read server prompt (non-blocking style isn't simple; we prompt user anyway)
+            System.out.print("Enter your name: ");
+            String name = console.readLine();
+            out.println(name); // send name to server
+
+            // Main loop: read from console and send to server
+            String inputMsg;
+            while ((inputMsg = console.readLine()) != null) {
+                if (inputMsg.equalsIgnoreCase("/quit")) {
+                    break;
+                }
+                out.println(inputMsg);
+            }
+
+            System.out.println("Disconnecting...");
+        } catch (IOException e) {
+            System.err.println("Client Error: " + e.getMessage());
+        }
+    }
+}
+
+```
+
+# Initials
+
+# InitialsServer.java
+```java
+import java.net.*;
+
+public class InitialsServer {
+    public static void main(String[] args) {
+        try {
+            DatagramSocket serverSocket = new DatagramSocket(9876);
+            byte[] receivedData = new byte[1024];
+            byte[] sendData;
+
+            while (true) {
+                DatagramPacket receivedPacket = new DatagramPacket(receivedData, receivedData.length);
+                System.out.println("Server Started...");
+                serverSocket.receive(receivedPacket);
+
+                String response = new String(receivedPacket.getData(), 0, receivedPacket.getLength());
+                System.out.println("Received Request: " + response);
+
+                String capName = response.toUpperCase();
+                String[] parts = capName.trim().split("\\s+");
+
+                StringBuilder initials = new StringBuilder();
+                for (String part : parts) {
+                    if (!part.isEmpty())
+                        initials.append(part.charAt(0)).append(".");
+                }
+
+                String fullResult = "Your Name: " + capName + "\nYour Initials: " + initials;
+                sendData = fullResult.getBytes();
+
+                InetAddress clientAdd = receivedPacket.getAddress();
+                int port = receivedPacket.getPort();
+
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, clientAdd, port);
+                serverSocket.send(sendPacket);
+            }
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+}
+
+```
+
+# InitialsClient.java
+```java
+import java.net.*;
+import java.util.Scanner;
+
+public class InitialsClient {
+    public static void main(String[] args) {
+        try {
+            DatagramSocket clientSocket = new DatagramSocket();
+            byte[] sendData;
+            byte[] receivedData = new byte[1024];
+
+            InetAddress add = InetAddress.getByName("localhost");
+            Scanner sc = new Scanner(System.in);
+
+            while (true) {
+                System.out.println("Enter your full name (Ex: Rohit Mangesh Joshi): ");
+                String data = sc.nextLine();
+
+                sendData = data.getBytes();
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, add, 9876);
+                clientSocket.send(sendPacket);
+
+                DatagramPacket receivePacket = new DatagramPacket(receivedData, receivedData.length);
+                clientSocket.receive(receivePacket);
+
+                String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
+                System.out.println(response);
+            }
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+}
+```
+
+# String Rev
+
+# StringService.java
+```java
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface StringService extends Remote {
+    String reverseString(String input) throws RemoteException;
+}
+```
+# StringServiceImpl.java
+```java
+import java.rmi.server.UnicastRemoteObject;
+import java.rmi.RemoteException;
+import java.util.Stack;
+
+public class StringServiceImpl extends UnicastRemoteObject implements StringService {
+
+    protected StringServiceImpl() throws RemoteException {
+        super();
+    }
+
+    @Override
+    public String reverseString(String input) throws RemoteException {
+        Stack<Character> stack = new Stack<>();
+
+        for (char ch : input.toCharArray()) {
+            stack.push(ch);
+        }
+
+        StringBuilder reversed = new StringBuilder();
+        while (!stack.isEmpty()) {
+            reversed.append(stack.pop());
+        }
+        return reversed.toString();
+    }
+}
+```
+# Server.java
+```java
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+
+public class Server {
+    public static void main(String[] args) {
+        try {
+            StringService service = new StringServiceImpl();
+            Registry registry = LocateRegistry.createRegistry(1099);
+            registry.rebind("StringService", service);
+            System.out.println("String Server is running...");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+# Client.java
+```java
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.util.Scanner;
+
+public class Client {
+    public static void main(String[] args) {
+        try {
+            Registry registry = LocateRegistry.getRegistry("localhost", 1099);
+            StringService service = (StringService) registry.lookup("StringService");
+
+            Scanner sc = new Scanner(System.in);
+
+            System.out.print("Enter a string to reverse: ");
+            String input = sc.nextLine();
+
+            String reversed = service.reverseString(input);
+            System.out.println("Reversed string: " + reversed);
+
+            sc.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+# RMI Banking System
+
+# BankInterface.java
+```java
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface BankInterface extends Remote {
+    double checkBalance(int accountNo) throws RemoteException;
+    void deposit(int accountNo, double amount) throws RemoteException;
+    boolean withdraw(int accountNo, double amount) throws RemoteException;
+    boolean transfer(int fromAcc, int toAcc, double amount) throws RemoteException;
+}
+```
+# BankImpl.java
+```java
+import java.rmi.server.UnicastRemoteObject;
+import java.rmi.RemoteException;
+import java.util.HashMap;
+import java.util.Map;
+
+public class BankImpl extends UnicastRemoteObject implements BankInterface {
+
+    private Map<Integer, Double> accounts;
+
+    protected BankImpl() throws RemoteException {
+        super();
+        accounts = new HashMap<>();
+
+        accounts.put(1001, 5000.0);
+        accounts.put(1002, 3000.0);
+        accounts.put(1003, 7000.0);
+    }
+
+    @Override
+    public double checkBalance(int accountNo) throws RemoteException {
+        return accounts.getOrDefault(accountNo, -1.0);
+    }
+
+    @Override
+    public void deposit(int accountNo, double amount) throws RemoteException {
+        accounts.put(accountNo, accounts.getOrDefault(accountNo, 0.0) + amount);
+    }
+
+    @Override
+    public boolean withdraw(int accountNo, double amount) throws RemoteException {
+        double balance = accounts.getOrDefault(accountNo, -1.0);
+        if (balance == -1.0) return false;
+
+        if (balance >= amount) {
+            accounts.put(accountNo, balance - amount);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean transfer(int fromAcc, int toAcc, double amount) throws RemoteException {
+        if (withdraw(fromAcc, amount)) {
+            deposit(toAcc, amount);
+            return true;
+        }
+        return false;
+    }
+}
+```
+# Server.java
+```java
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+
+public class Server {
+    public static void main(String[] args) {
+        try {
+            BankImpl bank = new BankImpl();
+            Registry registry = LocateRegistry.createRegistry(1099);
+            registry.rebind("BankService", bank);
+            System.out.println("Bank Server is running...");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+# Client.java
+```java
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.util.Scanner;
+
+public class Client {
+    public static void main(String[] args) {
+        try {
+            Registry registry = LocateRegistry.getRegistry("localhost", 1099);
+            BankInterface bank = (BankInterface) registry.lookup("BankService");
+
+            Scanner sc = new Scanner(System.in);
+
+            while (true) {
+                System.out.println("\n=== Banking Menu ===");
+                System.out.println("1. Check Balance");
+                System.out.println("2. Deposit");
+                System.out.println("3. Withdraw");
+                System.out.println("4. Transfer");
+                System.out.println("5. Exit");
+                System.out.print("Choose option: ");
+                int choice = sc.nextInt();
+
+                switch (choice) {
+                    case 1:
+                        System.out.print("Enter Account No: ");
+                        int acc1 = sc.nextInt();
+                        double bal = bank.checkBalance(acc1);
+                        if (bal == -1.0)
+                            System.out.println("Account not found.");
+                        else
+                            System.out.println("Balance: " + bal);
+                        break;
+
+                    case 2:
+                        System.out.print("Enter Account No: ");
+                        int acc2 = sc.nextInt();
+                        System.out.print("Enter Deposit Amount: ");
+                        double dep = sc.nextDouble();
+                        bank.deposit(acc2, dep);
+                        System.out.println("Deposit successful.");
+                        break;
+
+                    case 3:
+                        System.out.print("Enter Account No: ");
+                        int acc3 = sc.nextInt();
+                        System.out.print("Enter Withdraw Amount: ");
+                        double wd = sc.nextDouble();
+                        if (bank.withdraw(acc3, wd))
+                            System.out.println("Withdrawal successful.");
+                        else
+                            System.out.println("Insufficient funds or invalid account.");
+                        break;
+
+                    case 4:
+                        System.out.print("Enter From Account No: ");
+                        int from = sc.nextInt();
+                        System.out.print("Enter To Account No: ");
+                        int to = sc.nextInt();
+                        System.out.print("Enter Amount: ");
+                        double amt = sc.nextDouble();
+                        if (bank.transfer(from, to, amt))
+                            System.out.println("Transfer successful.");
+                        else
+                            System.out.println("Transfer failed (check balance/account).");
+                        break;
+
+                    case 5:
+                        System.out.println("Exiting...");
+                        sc.close();
+                        System.exit(0);
+                        break;
+
+                    default:
+                        System.out.println("Invalid choice.");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+ # Output
+ ```
+ === Banking Menu ===
+1. Check Balance
+2. Deposit
+3. Withdraw
+4. Transfer
+5. Exit
+Choose option: 1
+Enter Account No: 1001
+Balance: 5000.0
+
+Choose option: 4
+Enter From Account No: 1001
+Enter To Account No: 1002
+Enter Amount: 500
+Transfer successful.
+
+Choose option: 1
+Enter Account No: 1002
+Balance: 3500.0
+```
+
+
+# Distance calc- Haversine Formula
+
+# DistanceService.java
+```java
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface DistanceService extends Remote {
+    double calculateDistance(double lat1, double lon1, double lat2, double lon2) throws RemoteException;
+}
+```
+# DistanceServiceImpl.java
+```java
+import java.rmi.server.UnicastRemoteObject;
+import java.rmi.RemoteException;
+
+public class DistanceServiceImpl extends UnicastRemoteObject implements DistanceService {
+
+    private static final double R = 6371.0; // Radius of Earth in km
+
+    protected DistanceServiceImpl() throws RemoteException {
+        super();
+    }
+
+    @Override
+    public double calculateDistance(double lat1, double lon1, double lat2, double lon2) throws RemoteException {
+
+        double φ1 = Math.toRadians(lat1);
+        double φ2 = Math.toRadians(lat2);
+        double Δφ = Math.toRadians(lat2 - lat1);
+        double Δλ = Math.toRadians(lon2 - lon1);
+
+        double a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                   Math.cos(φ1) * Math.cos(φ2) *
+                   Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
+    }
+}
+```
+# Server.java
+```java
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+
+public class Server {
+    public static void main(String[] args) {
+        try {
+            DistanceService service = new DistanceServiceImpl();
+            Registry registry = LocateRegistry.createRegistry(1099);
+            registry.rebind("DistanceService", service);
+            System.out.println("Server is running and DistanceService is bound...");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+# Client.java
+```java
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.util.Scanner;
+
+public class Client {
+    public static void main(String[] args) {
+        try {
+            Registry registry = LocateRegistry.getRegistry("localhost", 1099);
+            DistanceService service = (DistanceService) registry.lookup("DistanceService");
+
+            Scanner sc = new Scanner(System.in);
+
+            System.out.println("Enter latitude of City 1: ");
+            double lat1 = sc.nextDouble();
+
+            System.out.println("Enter longitude of City 1: ");
+            double lon1 = sc.nextDouble();
+
+            System.out.println("Enter latitude of City 2: ");
+            double lat2 = sc.nextDouble();
+
+            System.out.println("Enter longitude of City 2: ");
+            double lon2 = sc.nextDouble();
+
+            double distance = service.calculateDistance(lat1, lon1, lat2, lon2);
+
+            System.out.printf("Distance between the two cities: %.3f km%n", distance);
+
+            sc.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+# Output
+```
+Enter latitude of City 1:
+19.0760
+Enter longitude of City 1:
+72.8777
+
+Enter latitude of City 2:
+28.7041
+Enter longitude of City 2:
+77.1025
+
+Distance between the two cities: 1148.252 km
 ```
 
 
