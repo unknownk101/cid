@@ -1,1421 +1,1112 @@
-Word Count
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+# 1a-Calc-RPC-Datagram
 
-import java.io.IOException;
+# CalculatorServer.java
+```java
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 
-public class WordCount {
-    public static class TokenizerMapper extends Mapper<Object, Text, Text, IntWritable> {
-
-        private final static IntWritable one = new IntWritable(1);
-        private Text word = new Text();
-        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
-
-            String[] words = value.toString().split("\\s+");
-            for (String w : words) {
-                word.set(w);
-                context.write(word, one);
+public class CalculatorServer {
+    public static void main(String[] args) {
+        try {
+            DatagramSocket socket = new DatagramSocket(9999);
+            byte[] receiveBuffer = new byte[1024];
+            System.out.println("Server is running...");
+            while (true) {
+                DatagramPacket request = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+                socket.receive(request);
+                String data = new String(request.getData(), 0, request.getLength());
+                System.out.println("Request received: " + data);
+                String[] parts = data.split(",");
+                double num1 = Double.parseDouble(parts[0]);
+                String operator = parts[1];
+                double num2 = Double.parseDouble(parts[2]);
+                double result = 0;
+                switch (operator) {
+                    case "+": result = num1 + num2; break;
+                    case "-": result = num1 - num2; break;
+                    case "*": result = num1 * num2; break;
+                    case "/": result = num2 != 0 ? num1 / num2 : Double.NaN; break;
+                    default: result = Double.NaN;
+                }
+                String response = "Result: " + result;
+                byte[] sendBuffer = response.getBytes();
+                DatagramPacket reply = new DatagramPacket(sendBuffer, sendBuffer.length,
+                        request.getAddress(), request.getPort());
+                socket.send(reply);
+                socket.close();
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-    }
-
-    public static class IntSumReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
-
-        private IntWritable result = new IntWritable();
-        public void reduce(Text key, Iterable<IntWritable> values, Context context)
-                throws IOException, InterruptedException {
-
-            int sum = 0;
-            for (IntWritable val : values) {
-                sum += val.get();
-            }
-            result.set(sum);
-            context.write(key, result);
-        }
-    }
-
-    public static void main(String[] args) throws Exception {
-
-        Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "word count");
-
-        job.setJarByClass(WordCount.class);
-        job.setMapperClass(TokenizerMapper.class);
-        job.setCombinerClass(IntSumReducer.class);
-        job.setReducerClass(IntSumReducer.class);
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
-
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
-
     }
 }
 
-Instructions
-Go to directory of WordCount.java, open terminal
-start-all.sh
-javac -classpath `hadoop classpath` -d . WordCount.java
-jar cf wc.jar WordCount*.class
-nano source.txt (Ctrl + S to save, Ctrl + X to exit nano)
-The file should contain or whatever you want:
-"
-Hello World Bye World
-Hello Hadoop Bye Hadoop
-"
-cat source.txt
-hadoop dfs -mkdir -p /input/wcip
-hadoop jar wc.jar WordCount /input/wcip /output/wcop/wco/wc
-hadoop dfs -ls /output/wcop/wco/wc
-hadoop dfs -cat /output/wcop/wco/wc/part-r-00000
+```
+# CalculatorClient.java
+```java
+import javax.swing.*;
+// import java.awt.event.*;
+import java.net.*;
 
-Matrix Multiplication
+public class CalculatorClient extends JFrame {
+    private JTextField num1Field = new JTextField(5);
+    private JTextField num2Field = new JTextField(5);
+    private JComboBox<String> operatorBox = new JComboBox<>(new String[]{"+", "-", "*", "/"});
+    private JButton calculateBtn = new JButton("Calculate");
+    private JLabel resultLabel = new JLabel("Result: ");
 
-1. Map
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Mapper;
-
-import java.io.IOException;
-
-public class Map extends org.apache.hadoop.mapreduce.Mapper<LongWritable, Text, Text, Text> {
-
-  @Override
-  public void map(LongWritable key, Text, value, Context context) throws IOException, InterruptedException {
-    Configuration conf = context.getConfiguration();
-    int m = Integer.parseInt(conf.get("m"));
-    int p = Integer.parseInt(conf.get("p"));
-    String line = value.toString();
-    String[] indicesAndValue = line.split(",");
-    Text outputKey = new Text();
-    Text outputValue = new Text();
-
-    if (indicesAndValue[0].equals("M")) {
-      for (int k = 0; k < p; k++){
-
-        outputKey.set(indicesAndValue[1] + "," + k);
-        outputValue.set(indicesValue[0] + "," + indicesValue[2] + "," + indicesAndValue[3]);
-        context.write(outputKey, outputvalue);
-
-      }
-    } else {
-
-      for (int i = 0; i < m; i++){
-        outputKey.set(i + "," + indicesAndValue[2]);
-        outputValue.set("N," + indicesAndValue[1] + "," + indicesAndValue[3]);
-
-        context.write(outputKye, outputValue);
-      }
+    public CalculatorClient() {
+        setTitle("RPC Calculator (UDP)");
+        setSize(300, 150);
+        setLayout(null);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        num1Field.setBounds(20, 20, 60, 25);
+        operatorBox.setBounds(90, 20, 60, 25);
+        num2Field.setBounds(160, 20, 60, 25);
+        calculateBtn.setBounds(90, 60, 100, 25);
+        resultLabel.setBounds(20, 100, 250, 25);
+        add(num1Field);
+        add(operatorBox);
+        add(num2Field);
+        add(calculateBtn);
+        add(resultLabel);
+        calculateBtn.addActionListener(e -> sendRequest());
     }
-  }
+
+    private void sendRequest() {
+        try {
+            double num1 = Double.parseDouble(num1Field.getText());
+            double num2 = Double.parseDouble(num2Field.getText());
+            String operator = (String) operatorBox.getSelectedItem();
+            String message = num1 + "," + operator + "," + num2;
+            DatagramSocket socket = new DatagramSocket();
+            byte[] sendBuffer = message.getBytes();
+            InetAddress serverAddress = InetAddress.getByName("localhost");
+
+            DatagramPacket request = new DatagramPacket(sendBuffer, sendBuffer.length, serverAddress, 9999);
+            socket.send(request);
+            byte[] receiveBuffer = new byte[1024];
+            DatagramPacket response = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+            socket.receive(response);
+            String result = new String(response.getData(), 0, response.getLength());
+            resultLabel.setText(result);
+            socket.close();
+        } catch (Exception ex) {
+            resultLabel.setText("Error: " + ex.getMessage());
+        }
+    }
+    public static void main(String[] args) {
+        new CalculatorClient().setVisible(true);
+    }
 }
 
-2. Reduce
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Reducer;
-import java.io.IoException
-import java.util.Hashmap;
+```
 
-public class Reduce extends org.apache.hadoop.mapreduce.Reducer<Text, Text, Text, Text> {
+
+# 1b-DateTime-RPC-Datagram
+
+# DateTimeServer.java
+```java
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+public class DateTimeServer {
+    public static void main(String[] args) {
+        final int PORT = 8888;
+        try {
+            DatagramSocket socket = new DatagramSocket(PORT);
+            byte[] receiveBuffer = new byte[1024];
+            System.out.println("DateTime Server is running on port " + PORT + "...");
+            while (true) {
+                DatagramPacket request = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+                socket.receive(request);
+                String message = new String(request.getData(), 0, request.getLength());
+                System.out.println("Received request: " + message);
+                String responseMessage;
+                if (message.equalsIgnoreCase("GET_DATE_TIME")) {
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                    responseMessage = "Server Time: " + formatter.format(new Date());
+                } else {
+                    responseMessage = "Invalid RPC Method!";
+                }
+                byte[] sendBuffer = responseMessage.getBytes();
+                DatagramPacket response = new DatagramPacket(
+                        sendBuffer,
+                        sendBuffer.length,
+                        request.getAddress(),
+                        request.getPort()
+                );
+                socket.send(response);
+                socket.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+```
+
+# DateTimeCLient.java
+```java
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+
+public class DateTimeClient {
+    public static void main(String[] args) {
+        final int PORT = 8888;
+        final String SERVER_ADDRESS = "localhost";
+        try {
+            DatagramSocket socket = new DatagramSocket();
+            String requestMessage = "GET_DATE_TIME";
+            byte[] sendBuffer = requestMessage.getBytes();
+            InetAddress serverAddress = InetAddress.getByName(SERVER_ADDRESS);
+            DatagramPacket request = new DatagramPacket(sendBuffer, sendBuffer.length, serverAddress, PORT);
+            socket.send(request);
+            byte[] receiveBuffer = new byte[1024];
+            DatagramPacket response = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+            socket.receive(response);
+            String result = new String(response.getData(), 0, response.getLength());
+            System.out.println("Response from server: " + result);
+            socket.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+```
+
+
+# 2a-Calc-RPC-SocketServer
+
+# CalculatorServerTCP.java
+```java
+import java.io.*;
+import java.net.*;
+
+public class CalculatorServerTCP {
+    public static void main(String[] args) {
+        final int PORT = 5000;
+
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            System.out.println("Calculator TCP Server running on port " + PORT + "...");
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("Client connected.");
+
+                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+
+                String request = in.readLine(); // e.g. "10,+,5"
+                System.out.println("Received: " + request);
+
+                String[] parts = request.split(",");
+                double num1 = Double.parseDouble(parts[0]);
+                String operator = parts[1];
+                double num2 = Double.parseDouble(parts[2]);
+
+                double result = 0;
+                switch (operator) {
+                    case "+" -> result = num1 + num2;
+                    case "-" -> result = num1 - num2;
+                    case "*" -> result = num1 * num2;
+                    case "/" -> result = num2 != 0 ? num1 / num2 : Double.NaN;
+                    default -> result = Double.NaN;
+                }
+                out.println("Result: " + result);
+                clientSocket.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }}}
+
+```
+
+# CalculatorClientTCP.java
+```java
+import javax.swing.*;
+// import java.awt.event.*;
+import java.io.*;
+import java.net.*;
+
+public class CalculatorClientTCP extends JFrame {
+    private JTextField num1Field = new JTextField(5);
+    private JTextField num2Field = new JTextField(5);
+    private JComboBox<String> operatorBox = new JComboBox<>(new String[]{"+", "-", "*", "/"});
+    private JButton calculateBtn = new JButton("Calculate");
+    private JLabel resultLabel = new JLabel("Result: ");
+
+    public CalculatorClientTCP() {
+        setTitle("TCP Calculator (Client GUI)");
+        setSize(320, 180);
+        setLayout(null);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+
+        num1Field.setBounds(20, 20, 60, 25);
+        operatorBox.setBounds(90, 20, 60, 25);
+        num2Field.setBounds(160, 20, 60, 25);
+        calculateBtn.setBounds(90, 60, 100, 25);
+        resultLabel.setBounds(20, 100, 250, 25);
+
+        add(num1Field);
+        add(operatorBox);
+        add(num2Field);
+        add(calculateBtn);
+        add(resultLabel);
+
+        calculateBtn.addActionListener(e -> sendRequest());
+    }
+    private void sendRequest() {
+        final int PORT = 5000;
+        final String HOST = "localhost";
+        Socket socket = null;
+
+        try {
+            double num1 = Double.parseDouble(num1Field.getText().trim());
+            double num2 = Double.parseDouble(num2Field.getText().trim());
+            String operator = (String) operatorBox.getSelectedItem();
+
+            String message = num1 + "," + operator + "," + num2;
+
+            socket = new Socket(HOST, PORT);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+
+            out.println(message);
+            String response = in.readLine();
+
+            resultLabel.setText(response);
+
+        } catch (NumberFormatException nfe) {
+            resultLabel.setText("Invalid input: enter numbers only.");
+        } catch (IOException ioe) {
+            resultLabel.setText("Connection error: " + ioe.getMessage());
+        } finally {
+            try {
+                if (socket != null) socket.close();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }    }  }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new CalculatorClientTCP().setVisible(true));
+    }}
+
+```
+
+
+# 2b-DateTime-RPC-SocketServer
+
+# DateTimeServerTCP.java
+```java
+import java.io.*;
+import java.net.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+public class DateTimeServerTCP {
+    public static void main(String[] args) {
+        final int PORT = 6000;
+
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            System.out.println("DateTime Server running on port " + PORT + "...");
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("Client connected.");
+
+                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+
+                String command = in.readLine();  // e.g., GET_DATE_TIME
+                System.out.println("Received: " + command);
+
+                if ("GET_DATE_TIME".equalsIgnoreCase(command)) {
+                    String dateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+                    out.println("Current Server Time: " + dateTime);
+                } else {
+                    out.println("Invalid command.");
+                }
+
+                clientSocket.close();
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } }}
+
+```
+
+# DateTimeClientTCP.java
+```java
+import java.io.*;
+import java.net.*;
+
+public class DateTimeClientTCP {
+    public static void main(String[] args) {
+        final int PORT = 6000;
+        final String HOST = "localhost";
+
+        try (
+            Socket socket = new Socket(HOST, PORT);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
+        ) {
+            System.out.println("Connected to DateTime Server.");
+            out.println("GET_DATE_TIME");
+
+            String response = in.readLine();
+            System.out.println("Server response: " + response);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } }}
+
+```
+
+
+# 3-RMI-DateTime
+
+# DateServer.java
+```java
+import java.rmi.server.UnicastRemoteObject;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.Naming;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+public class DateServer extends UnicastRemoteObject implements DateInterface {
+
+    protected DateServer() throws RemoteException {
+        super();
+    }
+
+    public String getDateTime() throws RemoteException {
+        try {
+            
+            SimpleDateFormat sdf = new SimpleDateFormat("EEEE, dd MMM yyyy HH:mm:ss");
+            return sdf.format(new Date());
+        } catch (Exception e) {
+            return "Error: " + e.getMessage();
+        }
+    }
+
+    public static void main(String args[]) {
+        try {
+            LocateRegistry.createRegistry(1099);
+            DateServer obj = new DateServer();
+            Naming.rebind("rmi://localhost:1099/DateService", obj);
+            System.out.println("Date Server is ready.");
+        } catch (Exception e) {
+            System.out.println("Server Error: " + e);
+        }
+    }
+}
+
+```
+
+# DateClient.java
+```java
+import java.rmi.Naming;
+
+public class DateClient {
+    public static void main(String[] args) {
+        try {
+            DateInterface stub = (DateInterface) Naming.lookup("rmi://localhost:1099/DateService");
+            String serverTime = stub.getDateTime();
+            System.out.println("Date & Time from Server: " + serverTime);
+        } catch (Exception e) {
+            System.out.println("Client Error: " + e);
+        }
+    }
+}
+
+```
+
+# DateInterface.java
+```java
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface DateInterface extends Remote {
+    String getDateTime() throws RemoteException;
+}
+
+```
+
+
+# 4-RMI-Library
+
+# Bill.java
+```java
+import java.io.Serializable;
+import java.sql.Date;
+
+public class Bill implements Serializable {
+    private String consumerName;
+    private Date dueDate;
+    private double amount;
+
+    // Getters and setters
+    public String getConsumerName() { return consumerName; }
+    public void setConsumerName(String name) { this.consumerName = name; }
+    public Date getDueDate() { return dueDate; }
+    public void setDueDate(Date date) { this.dueDate = date; }
+    public double getAmount() { return amount; }
+    public void setAmount(double amt) { this.amount = amt; }
+}
+
+```
+
+# BillingService.java
+```java
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.sql.SQLException;
+import java.util.List;
+
+public interface BillingService extends Remote {
+    List<Bill> getAllBills() throws RemoteException, SQLException, ClassNotFoundException;
+}
+
+```
+
+# BillingServiceImpl.java
+```java
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class BillingServiceImpl extends UnicastRemoteObject implements BillingService {
+    private static final long serialVersionUID = 1L;
+    
+    protected BillingServiceImpl() throws RemoteException {
+        super();
+    }
 
     @Override
-    public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-
-        String[] value;
-
-        HashMap<Integer, Float> hashA = new HashMap<Integer, Float>();
-        HashMap<Integer, Float> hashB = new HashMap<Integer, Float>();
-
-        for (Text val : values) {
-
-            value = val.toString().split(",");
-
-            if (value[0].equals("M")) {
-                hashA.put(Integer.parseInt(value[1]), Float.parseFloat(value[2]));
-
-            } else {
-                hashB.put(Integer.parseInt(value[1]), Float.parseFloat(value[2]));
-
+    public List<Bill> getAllBills() throws RemoteException, SQLException, ClassNotFoundException {
+        Connection conn = null;
+        Statement stmt = null;
+        ResultSet rs = null;
+        
+        try {
+            // Electric Bill database connection
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/Electric_Bill", 
+                "root", 
+                "Neha@0401"
+            );
+            
+            stmt = conn.createStatement();
+            String sql = "SELECT consumer_name, bill_due_date, bill_amount FROM Bill";
+            rs = stmt.executeQuery(sql);
+            
+            List<Bill> bills = new ArrayList<>();
+            while(rs.next()) {
+                Bill bill = new Bill();
+                bill.setConsumerName(rs.getString("consumer_name"));
+                bill.setDueDate(rs.getDate("bill_due_date"));
+                bill.setAmount(rs.getDouble("bill_amount"));
+                bills.add(bill);
             }
+            return bills;
+        } finally {
+            closeResources(rs, stmt, conn);
         }
-
-        int n = Integer.parseInt(context.getConfiguration().get("n"));
-        float result = 0.0f;
-        float m_ij;
-        float n_jk;
-
-        for (int j = 0; j < n; j++) {
-            m_ij = hashA.containsKey(j) ? hashA.get(j) : 0.0f;
-            n_jk = hashB = containsKye(j) ? hashB.get(j) : 0.0f;
-            result += m_ij * n_jk;
-
-        }
-
-        if (result != 0.0f) {
-            context.write(null, new Text(key.toString() + "," + Float.toString(result)));
+    }
+    
+    private void closeResources(ResultSet rs, Statement stmt, Connection conn) {
+        try {
+            if (rs != null) rs.close();
+            if (stmt != null) stmt.close();
+            if (conn != null) conn.close();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 }
 
-3. MatrixMultiply
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapreduce.*;
-import org.apache.hadoop.mapreduce.lib.input.*;
-import org.apache.hadoop.mapreduce.lib.output.*;
+```
 
-public class MatrixMultiply {
+# Book.java
+```java
+import java.io.Serializable;
 
-    public static void main(String[] args) throws Exception {
+public class Book implements Serializable {
+    private int bookId;
+    private String bookName;
+    private String author;
 
-        if (args.length != 2) {
+    // Getters and setters
+    public int getBookId() { return bookId; }
+    public void setBookId(int id) { this.bookId = id; }
+    public String getBookName() { return bookName; }
+    public void setBookName(String name) { this.bookName = name; }
+    public String getAuthor() { return author; }
+    public void setAuthor(String author) { this.author = author; }
+}
 
-            System.err.println("Usage: Matrix Multiply <in_dir> <out_dir>");
-            System.exit(2);
+```
 
+# DatabaseClient.java
+```java
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.sql.SQLException;
+import java.util.List;
+
+public class DatabaseClient {
+    public static void main(String[] args) {
+        try {
+            Registry registry = LocateRegistry.getRegistry("localhost", 1099);
+            
+            LibraryService libraryService = 
+                (LibraryService) registry.lookup("LibraryService");
+            BillingService billingService = 
+                (BillingService) registry.lookup("BillingService");
+            
+            List<Book> books = libraryService.getAllBooks();
+            System.out.println("\nAvailable Books:");
+            books.forEach(book -> {
+                System.out.println("ID: " + book.getBookId() +
+                                 ", Name: " + book.getBookName() +
+                                 ", Author: " + book.getAuthor());
+            });
+            
+            List<Bill> bills = billingService.getAllBills();
+            System.out.println("\nPending Bills:");
+            bills.forEach(bill -> {
+                System.out.println("Consumer: " + bill.getConsumerName() +
+                                 ", Due Date: " + bill.getDueDate() +
+                                 ", Amount: Rs. " + bill.getAmount());
+            });
+        } catch (Exception e) {
+            System.err.println("Error accessing remote services:");
+            if (e instanceof java.rmi.ConnectException) {
+                System.err.println("Connection error: Could not connect to RMI registry");
+            } else if (e instanceof java.rmi.NotBoundException) {
+                System.err.println("Service not found: LibraryService or BillingService not registered");
+            } else if (e instanceof java.rmi.RemoteException) {
+                System.err.println("Remote service error: " + e.getMessage());
+            } else if (e instanceof SQLException) {
+                System.err.println("Database error: " + e.getMessage());
+            } else {
+                System.err.println("Unexpected error: " + e.getMessage());
+            }
+            e.printStackTrace();
         }
-
-        Configuration conf = new Configuration();
-
-        conf.set("m", "1000");
-        conf.set("n", "100");
-        conf.set("p", "1000");
-
-        @SuppressWarnings("deprecation")
-        Job job = new Job(conf, "MatrixMultiply");
-
-        job.setJarByClass(MatrixMultiply.class);
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(Text.class);
-        job.setMapperClass(Map.class);
-        job.setReducerClass(Reduce.class);
-        job.setInputFormatClass(TextInputFormat.class);
-        job.setOutputFormatClass(TextOutputFormat.class);
-
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
-        job.waitForCompletion(true);
-
     }
 }
 
-Instructions
-Go to directory of program, open terminal
-start-all.sh
-javac -classpath `hadoop classpath` -d . *.java
-jar cf wc.jar *.class
-cat first.txt second.txt
-The file content is in "### Source"
-hadoop fs -mkdir -p /input/mmi
-hadoop fs -copyFromLocal first.txt /input/mmi/first.txt
-hadoop fs -copyFromLocal second.txt /input/mmi/second.txt
-hadoop fs -cat /input/mmi/first.txt /input/mmi/second.txt
-hadoop fs -mkdir /output/mmo
-hadoop jar mm.jar MatrixMultiply /input/mmi /output/mmo/mm
-hadoop fs -ls /output/mmo/mm
-hadoop fs -cat /output/mmo/mm/part-r-00000
-
-Source
-first.txt
-M, 0, 0, 1
-M, 0, 1, 2
-M, 1, 0, 3
-M, 1, 1, 4
-
-second.txt
-N, 0, 0, 5
-N, 0, 1, 6
-N, 1, 0, 7
-N, 1, 1, 8
-
-
-//8-Hive
-1 — Prepare HDFS input directories & copy sample files
-# create HDFS input dir for students
-hadoop fs -mkdir -p /input/student
-
-# copy local student data file into HDFS
-hadoop fs -copyFromLocal /home/hadoop/hive_examples/student_data_all.txt /input/student
-
-# verify in HDFS (optional)
-hadoop fs -ls /input/student
-hadoop fs -cat /input/student/student_data_all.txt | head
-
-2 — Create database in Hive and staging (external) table
-
-Enter Hive CLI (hive) and run:
-
--- create database
-CREATE DATABASE IF NOT EXISTS mydb;
-USE mydb;
-
--- create external staging table pointing to HDFS data
-CREATE EXTERNAL TABLE IF NOT EXISTS mydb.student_info_all (
-  roll INT,
-  stfname STRING,
-  stlname STRING,
-  course STRING
-)
-ROW FORMAT DELIMITED
-FIELDS TERMINATED BY ','
-LOCATION '/input/student';
-
-3 — Create partitioned table (staging → partitioned target)
--- create partitioned table (course as partition)
-CREATE TABLE IF NOT EXISTS mydb.student (
-  roll INT,
-  stfname STRING,
-  stlname STRING
-)
-PARTITIONED BY (course STRING)
-ROW FORMAT DELIMITED
-FIELDS TERMINATED BY ',';
-
-4 — Static partitioning (explicit partition values)
-
-Ensure the strict mode settings before static inserts:
-
-SET hive.exec.dynamic.partition=false;
-SET hive.exec.dynamic.partition.mode=strict;
-
-
-Insert rows for a specific partition (example: html, hadoop):
-
--- insert into html partition
-INSERT OVERWRITE TABLE mydb.student PARTITION(course='html')
-SELECT roll, stfname, stlname FROM mydb.student_info_all WHERE course='html';
-
--- insert into hadoop partition
-INSERT OVERWRITE TABLE mydb.student PARTITION(course='hadoop')
-SELECT roll, stfname, stlname FROM mydb.student_info_all WHERE course='hadoop';
-
-
-Verify table contents and partitions:
-
-SELECT * FROM mydb.student;
-SHOW PARTITIONS mydb.student;
-
-
-You can add a partition explicitly:
-
-ALTER TABLE mydb.student ADD PARTITION (course='python');
-SHOW PARTITIONS mydb.student;
-
-
-Drop partitions:
-
-ALTER TABLE mydb.student DROP PARTITION (course='PYTHON');
-ALTER TABLE mydb.student DROP PARTITION (course='hadoop');
-ALTER TABLE mydb.student DROP PARTITION (course='html');
-SHOW PARTITIONS mydb.student;
-DESC FORMATTED mydb.student;
-
-5 — Dynamic partitioning (auto-create partitions)
-
-Turn on dynamic partitioning and insert:
-
-SET hive.exec.dynamic.partition=true;
-SET hive.exec.dynamic.partition.mode=nonstrict;
-
-INSERT OVERWRITE TABLE mydb.student PARTITION(course)
-SELECT roll, stfname, stlname, course FROM mydb.student_info_all;
-
-
-Verify:
-
-SELECT * FROM mydb.student;
-SHOW PARTITIONS mydb.student;
--- show a specific partition
-SHOW PARTITIONS mydb.student PARTITION (course='hadoop');
-
-6 — Hive built-in operators & functions (examples)
-
-Examples you can copy-paste:
-
--- WHERE comparisons
-SELECT * FROM mydb.student_info_all WHERE roll > 10;
-SELECT * FROM mydb.student_info_all WHERE course = 'hadoop';
-
--- string concat
-SELECT CONCAT(stfname, ' ', stlname) AS full_name FROM mydb.student_info_all;
-
--- aggregation count
-SELECT COUNT(*) AS total_students FROM mydb.student_info_all;
-
-
-Add any other built-ins similarly (substr, upper, lower, regexp, cast, etc.).
-
-7 — Views and Indexes (create / drop)
-
-Create a sample view (employee example from doc — ensure mydb.employee exists):
-
--- create view
-CREATE VIEW mydb.costly_employee_vw AS
-SELECT e.empfname, e.job, e.salary
-FROM mydb.employee e
-WHERE e.salary > 2000 AND e.job NOT LIKE 'M%';
-
--- drop view
-DROP VIEW IF EXISTS mydb.costly_employee_vw;
-
-
-Create and drop index example:
-
--- create index (compact index handler) - deferred rebuild
-CREATE INDEX index_emp ON TABLE mydb.employee (id)
-AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler'
-WITH DEFERRED REBUILD;
-
--- show index (after using database)
-SHOW INDEX ON employee;
-
--- drop the index
-DROP INDEX index_emp ON mydb.employee;
-
-
-(Note: index support and syntax may differ by Hive version — some Hive installations do not use indexes heavily.)
-
-8 — HiveQL: WHERE, ORDER BY, GROUP BY examples
--- WHERE clause
-SELECT * FROM mydb.employee WHERE deptcode = 10;
-
--- ORDER BY (global order) - sorts whole result (may require reducer=1)
-SELECT id, empfname, emplname, job, salary, deptcode FROM mydb.employee ORDER BY salary DESC;
-
--- GROUP BY with aggregation
-SELECT deptcode, AVG(salary) AS avg_salary FROM mydb.employee GROUP BY deptcode;
-
-9 — Create external department table & joins example
-
-Prepare HDFS dept data and create table:
-
-# HDFS steps
-hadoop fs -mkdir -p /input/dept
-hadoop fs -copyFromLocal /home/hadoop/hive_examples/dept_data.txt /input/dept
-hadoop fs -cat /input/dept/dept_data.txt | head
-
-
-Create external table in Hive:
-
-CREATE EXTERNAL TABLE IF NOT EXISTS mydb.department (
-  deptcode INT,
-  deptname STRING,
-  location STRING
-)
-ROW FORMAT DELIMITED
-FIELDS TERMINATED BY ','
-LOCATION '/input/dept';
-
-SELECT * FROM mydb.department;
-
-
-Join examples:
-
--- inner join
-SELECT e.empfname, e.deptcode, d.deptname, d.location
-FROM mydb.employee e
-INNER JOIN mydb.department d
-ON e.deptcode = d.deptcode;
-
--- left join
-SELECT e.empfname, e.deptcode, d.deptname, d.location
-FROM mydb.employee e
-LEFT JOIN mydb.department d
-ON e.deptcode = d.deptcode;
-
--- right join
-SELECT e.empfname, e.deptcode, d.deptname, d.location
-FROM mydb.employee e
-RIGHT JOIN mydb.department d
-ON e.deptcode = d.deptcode;
-
--- full outer join (example with a subquery)
-SELECT e.empfname, e.deptcode, d.deptname, d.location
-FROM (SELECT empfname, deptcode FROM mydb.employee WHERE job = 'ANALYST') e
-FULL OUTER JOIN mydb.department d
-ON e.deptcode = d.deptcode;
-
-//9-Pig
-1. Start Pig Services
-pig
-
-2. Create HDFS directory structure
-hadoop fs -mkdir -p /input/pig
-hadoop fs -ls /input/pig
-
-3. Copy local files into HDFS
-
-(Adjust filename if your file is in downloads/home folder.)
-
-hadoop fs -copyFromLocal sample_student_data.txt /input/pig/
-hadoop fs -copyFromLocal interns_data.txt /input/pig/
-hadoop fs -ls /input/pig
-
-4. Start Pig Shell
-pig
-
-Q1 – Run the following Pig Commands
-A. Basic Load and Store Operations
-Load
-A = LOAD 'sample_student_data.txt'
-    USING PigStorage(',')
-    AS (id:chararray, fname:chararray, lname:chararray, age:int, phone:chararray, city:chararray);
-
-Store
-STORE A INTO 'sampleoutput' USING PigStorage('|');
-
-B. Diagnostic Operations
-Dump data
-DUMP A;
-
-Describe
-DESCRIBE A;
-
-Explain
-EXPLAIN A;
-
-C. Filtering
-B = FILTER A BY age > 22;
-
-
-Execution plan:
-
-EXPLAIN B;
-
-D. Projection (Selecting Columns)
-C = FOREACH B GENERATE id, fname, age, city;
-
-
-Illustrate:
-
-ILLUSTRATE C;
-
-E. Grouping Operations
-1. Group by city
-G = GROUP A BY city;
-DUMP G;
-DESCRIBE G;
-
-2. Group by multiple fields
-G1 = GROUP A BY (city, age);
-DUMP G1;
-
-3. Group all
-Ga = GROUP A ALL;
-DUMP Ga;
-
-F. Co-Group Operations
-Load second file
-I = LOAD 'interns_data.txt'
-    USING PigStorage(',')
-    AS (id:chararray, fname:chararray, age:int, city:chararray);
-
-Co-Group
-CG = COGROUP A BY age, I BY age;
-DUMP CG;
-
-G. Join Operations
-Load again for self join
-A1 = LOAD 'sample_student_data.txt'
-    USING PigStorage(',')
-    AS (id:chararray, fname:chararray, lname:chararray, age:int, phone:chararray, city:chararray);
-
-Self Join
-Self_Join = JOIN A BY age, A1 BY age;
-DUMP Self_Join;
-
-Inner Join
-Inner_Join = JOIN A BY city, I BY city;
-DUMP Inner_Join;
-
-Left Outer Join
-LEFT_Join = JOIN A BY city LEFT, I BY city;
-DUMP LEFT_Join;
-
-Right Outer Join
-Right_Join = JOIN A BY city RIGHT OUTER, I BY city;
-DUMP Right_Join;
-
-Full Outer Join
-Full_Join = JOIN A BY city FULL OUTER, I BY city;
-DUMP Full_Join;
-
-H. Cross Product
-cross_prod = CROSS A, I;
-DUMP cross_prod;
-
-I. Sorting
-Descending
-B = ORDER A BY id DESC;
-DUMP B;
-
-Limit 3
-c = LIMIT B 3;
-DUMP c;
-
-Ascending
-B = ORDER A BY id ASC;
-
-Limit 5
-c1 = LIMIT B 5;
-DUMP c1;
-
-J. Combining & Splitting
-Union
-Union_data = UNION c, c1;
-DUMP Union_data;
-
-Split
-SPLIT A INTO younger_students IF age < 23, older_students IF age >= 23;
-
-DUMP younger_students;
-DUMP older_students;
-
-K. Filtering and Distinct
-Filter city = Mumbai
-filter_city = FILTER A BY city == 'Mumbai';
-DUMP filter_city;
-
-Select only city column
-all_city = FOREACH A GENERATE city;
-DUMP all_city;
-
-Distinct cities
-distinct_cities = DISTINCT all_city;
-DUMP distinct_cities;
-
-L. Create & Run Pig Script File
-Create script file
-cat > citywise_avg_students_age.pig
-
-
-Paste inside:
-
-student_info = LOAD '/home/hadoop/pig_examples/sample_student_data.txt'
-                USING PigStorage(',')
-                AS (id:chararray, fname:chararray, lname:chararray, age:int, phone:chararray, city:chararray);
-
-citywise = GROUP student_info BY city;
-
-citywise_avg_age = FOREACH citywise GENERATE group, AVG(student_info.age);
-
-STORE citywise_avg_age INTO '/home/hadoop/pig_examples/city_avg_age1'
-      USING PigStorage('|');
-
-
-Press Ctrl + D to save.
-
-M. Run Pig Script in MapReduce Mode
-pig -x mr -f citywise_avg_students_age.pig
-
-Check Output
-hadoop fs -ls /home/hadoop/pig_examples/city_avg_age1
-hadoop fs -cat /home/hadoop/pig_examples/city_avg_age1/part-r-00000
-
-//10-Spark
-1. Start Hadoop DFS & YARN
-start-dfs.sh
-start-yarn.sh
-
-2. Check Spark History Server
-jps
-
-
-If history server not running:
-
-$SPARK_HOME/sbin/start-history-server.sh
-
-3. Start Spark Shell
-cd $SPARK_HOME/bin
-./spark-shell
-
-4. Start PySpark (for Spark SQL & DataFrame API)
-$SPARK_HOME/bin/pyspark
-
-5. Upload CSV file to HDFS
-
-(Example)
-
-hadoop fs -copyFromLocal drivers.csv /user/snigdha/pig/
-hadoop fs -ls /user/snigdha/pig/
-
-6. Load CSV into Spark DataFrame
-From HDFS
-mydf = spark.read.csv('/user/snigdha/pig/drivers.csv',
-                      header='true',
-                      inferSchema='true')
-
-From Local
-mydf = spark.read.csv('file:///home/hadoop/spark_examples/drivers.csv',
-                      header='true',
-                      inferSchema='true')
-
-7. Check Schema
-mydf.printSchema()
-
-8. Create Temporary SQL View
-mydf.createOrReplaceTempView('driver_data')
-
-9. Run Spark SQL
-mydf2 = spark.sql("SELECT * FROM driver_data")
-mydf2.show()
-
-10. Store Output as CSV
-To HDFS
-mydf2.write.options(header='True').csv("/user/sohan/output/spark_result_csv")
-
-To Local File System
-mydf2.write.options(header='True').csv("file:///home/hadoop/spark_examples/spark_result_csv")
-
-11. Working with JSON in Spark
-Load JSON File
-
-From HDFS
-
-df = spark.read.json("/user/sohan/input/people.json")
-
-
-From Local
-
-df = spark.read.json("file:///home/hadoop/spark_examples/people.json")
-
-12. Show JSON Data
-df.show()
-
-13. Print Schema
-df.printSchema()
-
-14. Select Single Column
-df.select("name").show()
-
-15. Select with Expression (age + 1)
-df.select(df['name'], df['age'] + 1).show()
-
-16. Filter Data (age > 21)
-df.filter(df['age'] > 21).show()
-
-17. Group By Age
-df.groupBy("age").count().show()
-
-18. Create SQL View & Run Query
-df.createOrReplaceTempView("people")
-sqlDF = spark.sql("SELECT * FROM people")
-sqlDF.show()
-
-//4-mongodb
-1. Start / Stop / Status of MongoDB service (Linux — systemd)
-# start MongoDB
-sudo systemctl start mongod
-
-# stop MongoDB
-sudo systemctl stop mongod
-
-# restart MongoDB
-sudo systemctl restart mongod
-
-# check status
-sudo systemctl status mongod
-
-# alternative older sysvinit command (if systemctl not available)
-sudo service mongod start
-sudo service mongod stop
-sudo service mongod status
-
-2. Open Mongo shell
-# modern shell (recommended)
-mongosh
-
-# older shell (if mongosh not installed)
-mongo
-
-3. Create / switch to a database
-
-(Inside mongosh / mongo prompt)
-
--- Switch to (or create) database named "mydb"
-use mydb
-
--- Confirm current DB
-db
-
-4. Insert 1 record into a collection
--- Insert a single document into collection "students"
-db.students.insertOne({ name: "Amit", age: 16, state: "Uttar Pradesh", district: "Gorakhpur", phone: "9876543210" })
-
--- Confirm insert
-db.students.findOne({ name: "Amit" })
-
-5. Insert many records (bulk insert)
-db.students.insertMany([
-  { name: "Ravi", age: 15, state: "Uttar Pradesh", district: "Gorakhpur", phone: "9000000001" },
-  { name: "Sonia", age: 17, state: "Maharashtra", district: "Pune", phone: "9000000002" },
-  { name: "Neha", age: 14, state: "Uttar Pradesh", district: "Lucknow", phone: "9000000003" }
-]);
-
-6. Delete a collection
--- Drop the entire collection "students"
-db.students.drop();
-
--- Verify collection gone
-show collections
-
-7. Import CSV file into a collection (from normal terminal)
-
-(Assumes CSV has header line with column names matching desired field names)
-
-# Example CSV path on local file system
-# sample file: /home/hadoop/mongo_examples/students.csv
-
-# Import CSV into mydb.students collection
-mongoimport --db mydb --collection students --type csv --headerline --file /home/hadoop/mongo_examples/students.csv
-
-# If connecting to a remote host or using authentication, add --host, --username, --password, --authenticationDatabase options as required.
-
-
-If the CSV should be treated as JSON-like input, convert or use --jsonArray with a JSON file.
-
-8. See the records inserted (find)
--- show all (beware large collections)
-db.students.find();
-
--- pretty print
-db.students.find().pretty();
-
--- show 5 records
-db.students.find().limit(5);
-
-9. Display 5 records where state = "Uttar Pradesh"
-db.students.find({ state: "Uttar Pradesh" }).limit(5).pretty();
-
-10. Display 5 records where state = "Uttar Pradesh" and district = "Gorakhpur"
-db.students.find({ state: "Uttar Pradesh", district: "Gorakhpur" }).limit(5).pretty();
-
-11. Display state name and district where age > 14 (projection)
--- Query with projection: show only state and district fields (1 = include, _id excluded)
-db.students.find({ age: { $gt: 14 } }, { state: 1, district: 1, _id: 0 }).pretty();
-
-12. Update records where state = "Uttar Pradesh" → change to "UP"
--- Update multiple documents
-db.students.updateMany(
-  { state: "Uttar Pradesh" },
-  { $set: { state: "UP" } }
+```
+
+# DatabaseServer.java
+```java
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+
+public class DatabaseServer {
+    public static void main(String[] args) {
+        try {
+           
+            LibraryService libraryService = new LibraryServiceImpl();
+            BillingService billingService = new BillingServiceImpl();
+            
+            Registry registry = LocateRegistry.createRegistry(1099);
+            
+            registry.bind("LibraryService", libraryService);
+            registry.bind("BillingService", billingService);
+            
+            System.out.println("Database Server started!");
+        } catch (Exception e) {
+            System.err.println("Error starting server: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
+
+```
+
+# LibraryService.java
+```java
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.util.List;
+import java.sql.SQLException;
+
+public interface LibraryService extends Remote {
+    List<Book> getAllBooks() throws RemoteException, SQLException, ClassNotFoundException;
+}
+
+```
+
+# LibraryServiceImpl.java
+```java
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class LibraryServiceImpl extends UnicastRemoteObject implements LibraryService {
+    private static final long serialVersionUID = 1L;
+    
+    protected LibraryServiceImpl() throws RemoteException {
+        super();
+    }
+
+    @Override
+    public List<Book> getAllBooks() throws RemoteException, SQLException, ClassNotFoundException {
+        Connection conn = null;
+        Statement stmt = null;
+        ResultSet rs = null;
+        
+        try {
+
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/Library", 
+                "root", 
+                "Neha@0401"
+            );
+            
+            stmt = conn.createStatement();
+            String sql = "SELECT book_id, book_name, author FROM Book";
+            rs = stmt.executeQuery(sql);
+            
+            List<Book> books = new ArrayList<>();
+            while(rs.next()) {
+                Book book = new Book();
+                book.setBookId(rs.getInt("book_id"));
+                book.setBookName(rs.getString("book_name"));
+                book.setAuthor(rs.getString("author"));
+                books.add(book);
+            }
+            return books;
+        } finally {
+            closeResources(rs, stmt, conn);
+        }
+    }
+    
+    private void closeResources(ResultSet rs, Statement stmt, Connection conn) {
+        try {
+            if (rs != null) rs.close();
+            if (stmt != null) stmt.close();
+            if (conn != null) conn.close();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+
+```
+
+# MySQL
+
+```sql
+-- create library DB and table
+CREATE DATABASE IF NOT EXISTS Library;
+USE Library;
+CREATE TABLE IF NOT EXISTS Book (
+  book_id INT PRIMARY KEY,
+  book_name VARCHAR(255),
+  author VARCHAR(255)
 );
 
--- Verify change (show 5)
-db.students.find({ state: "UP" }).limit(5).pretty();
-
-13. Delete one record
--- Delete a single matching document (first matched)
-db.students.deleteOne({ name: "Amit" });
-
--- Or delete by ObjectId
-db.students.deleteOne({ _id: ObjectId("PUT_OBJECTID_HERE") });
-
-14. Export collection to JSON / CSV (normal terminal)
-# Export to JSON (one document per line)
-mongoexport --db mydb --collection students --out /home/hadoop/mongo_exports/students.json --jsonArray
-
-# Export to CSV (specify fields)
-mongoexport --db mydb --collection students --type=csv --fields name,age,state,district,phone --out /home/hadoop/mongo_exports/students.csv
-
-//5-analysis operation
-Q1. Find the customer with the highest overall profit. What is his/her profit ratio?
-Steps
-
-Open SuperstoreUS2015.xlsx dataset.
-
-Drag Orders sheet into the canvas to load it.
-
-Go to Sheet 1.
-
-Drag Customer Name → Rows.
-
-Drag Profit → Columns.
-
-Click Profit axis → Sort Descending to see the highest profit customer on top.
-
-To calculate Profit Ratio, create a Calculated Field:
-
-Calculated Field
-Profit Ratio = SUM([Profit]) / SUM([Sales])
-
-
-Steps:
-
-Go to Analysis → Create Calculated Field
-
-Enter formula above
-
-Name: Profit Ratio
-
-Drag Profit Ratio to Tooltip or Marks label
-
-Q2. Which state has the highest total Sales? What is the Sales amount?
-Steps
-
-Drag State/Province → Rows
-
-Drag Sales (SUM) → Columns
-
-Sort Sales in descending order
-
-The first row = state with highest sales + sales value
-
-Q3. Which customer segment has highest order quantity & average discount?
-Steps
-
-Drag Customer Segment → Rows
-
-Drag Quantity Ordered New → Columns
-
-Drag Discount → Columns (next to quantity)
-
-Answer
-
-Corporate segment has:
-
-Highest Order Quantity
-
-Highest Average Discount Rate
-
-Q4. Which Product Category has highest Sales? Which has worst Profit?
-Steps (Sales)
-
-Drag Product Category → Rows
-
-Drag Sales (Sum) → Columns
-
-Sort descending
-
-Result
-
-Technology → Highest Sales (~3,514,982)
-
-Steps (Profit)
-
-Replace Sales with Profit on Columns
-
-Sort ascending (for worst profit)
-
-Result
-
-Furniture → Worst Profit (~177,354 dollars)
-
-Q5. What was the Profit on Technology for the City: Boca Raton?
-Steps
-
-Use the same bar graph from Q4.
-
-Add City to Filters → Show Filter → Select Boca Raton.
-
-Add Product Category to Filters → Select Technology only.
-
-The resulting single bar displays Profit for Technology in Boca Raton.
-
-Q6. Which Product Department has the highest Shipping Costs?
-Steps
-
-Drag Product Category → Rows
-
-Drag Shipping Cost → Columns
-
-Sort descending
-
-The first item = Department with highest Shipping Cost (value also shown on chart).
-
-Q7. What was the shipping cost of Office Supplies → Xerox 1905 → Home Segment → Cambridge?
-Steps
-
-Add Filters:
-
-Product Category → choose Office Supplies
-
-Product Name → choose Xerox 1905
-
-Customer Segment → choose Home
-
-City → choose Cambridge
-
-Display Shipping Cost from the filtered record.
-
-Answer
-
-Shipping Cost = 9.54 dollars.
-
-//6-Preparing maps
-Q1. Prepare a Geographic Map to Show Sales in Each State
-Steps
-
-Connect to Superstore dataset.
-
-Drag Orders sheet into the canvas (join with People/User sheet if needed).
-
-Create Geographic Hierarchy
-
-Right-click Region → Hierarchy → Create Hierarchy.
-
-Name it Mapping Items → OK.
-
-Drag State under Region → then drag City, then Postal Code to complete the hierarchy.
-
-Build the Map
-
-Double-click Region → Tableau automatically creates a map.
-
-On Marks card, click + on Region to drill down if needed.
-
-Add Sales to Map
-
-Drag Sales → Color on Marks.
-
-Drag Sales → Label on Marks.
-
-Format sales labels
-
-Right-click Sales → Default Properties → Number Format.
-
-Set:
-
-Number (Custom)
-
-Decimal Places = 0
-
-Units = Thousands (K)
-
-This shows Sales per State on the geographic map.
-
-Q2. Show Profit Ratio of Each State as Tooltip on Map
-Create Profit Ratio
-
-Go to Analysis → Create Calculated Field:
-
-Profit Ratio = SUM([Profit]) / SUM([Sales])
-
-
-Press OK.
-
-Build visualization
-
-Drag State → Rows
-
-Drag Profit Ratio → Columns
-
-Drag Profit Ratio → Label on Marks (or Tooltip)
-
-The map now shows Profit Ratio per State.
-
-Q3. Show Profit Ratio for Grip Envelop Products
-Steps
-
-Drag Product Name → Rows
-
-Drag Profit Ratio (calculated field) → Columns
-
-Add Product Name filter → select Grip Envelop
-
-Apply → OK
-
-Result
-
-Profit Ratio for Grip Envelop = 0.1310
-
-Q4. In Technology Category, Which Unprofitable State is Surrounded by Only Profitable States?
-Steps
-
-Drag Product Category → Filters → select Technology
-
-Drag Profit → Color on Marks
-
-Drag Profit → Label on Marks
-
-Observe state-level profit coloring
-
-Result
-
-Nevada is the unprofitable state surrounded by profitable states.
-
-Q5. Which State Has the Worst Gross Profit Ratio on Envelopes in the Corporate Segment Shipped in 2012?
-Steps
-
-Drag State → Rows
-
-Apply filters:
-
-Product Sub-Category → Envelopes
-
-Customer Segment → Corporate
-
-Order Date (Year) → 2012
-
-Drag Profit Ratio → Columns
-
-Drag Profit Ratio → Color on Marks
-
-Identify the lowest value.
-
-Answer
-
-South Carolina has the worst Gross Profit Ratio.
-
-//7-preparing reports
-1. Report: Product Category-wise Sales
-Steps
-
-Drag Product Category → Rows
-
-Drag Sales → Text on Marks
-
-Click Text on Marks → Show Mark Labels
-
-Drag Product Category → Color on Marks
-
-This creates a report showing Sales for each Product Category.
-
-2. Report: Region-wise Product Category Sales
-Steps
-
-Drag Region → Columns
-
-Drag Product Category → Rows
-
-Drag Sales → Text on Marks
-
-This shows a matrix of Sales across Region × Category.
-
-3. Report: State-wise Sales
-Steps
-
-Drag State/Province → Rows
-
-Drag Sales → Columns
-
-Click Text on Marks → Show Mark Labels
-
-Drag State/Province → Color on Marks
-
-This shows Sales per State.
-
-4. Percent of Total Sales for ‘Home Office’ Segment in July 2013
-Steps
-
-Drag Customer Segment → Rows
-
-Drag Sales → Text on Marks
-
-Add Order Date Filter
-
-Drag Order Date → Filters
-
-Choose Years → select 2013 → Apply → OK
-
-Change Sales to Quick Table Calculation → Percent of Total
-
-Result
-
-Percent of total Sales for Home Office in July 2013 = 21.65%
-
-5. Top 10 Product Names by Sales Within Each Region (Central & West), Year 2015
-
-(And find which product is ranked #2 in both regions)
-
-Steps
-A. Set up main view
-
-Drag Product Name → Rows
-
-Drag Order Date → Filters → choose Year → select 2015
-
-Drag Region → Filters → select Central and West
-
-Drag Region again → Columns
-
-Drag Sales → Text on Marks
-
-B. Apply Top 10 Filter
-
-Drag Product Name → Filters
-
-In the window → select Top tab
-
-Choose By Field → Top 10 by SUM(Sales) → OK
-
-C. Add Ranking
-
-Right-click SUM(Sales) →
-Quick Table Calculation → Rank
-
-Change addressing:
-Compute Using → Table Down
-
-Now each region (Central & West) shows Top 10 products ranked by Sales.
-
-Question
-
-Which product is ranked #2 in both Central & West?
-
-→ Identify product with Rank = 2 in both columns.
-
-(Your file does not specify the product name; you see it in Tableau after ranking.)
-
-//1-h c
-1. start-all.sh
-Starts all Hadoop daemons: NameNode, DataNode, ResourceManager, NodeManager.
-Expected: All Hadoop services start successfully.
-
-2. jps
-Lists all Java processes related to Hadoop.
-Expected: Shows NameNode, DataNode, SecondaryNameNode, ResourceManager, NodeManager, etc.
-
-3. hadoop version
-Shows Hadoop version and build information.
-Expected: Displays installed Hadoop version.
-
-4. hadoop fs -ls /
-Lists files/directories in the HDFS root.
-Expected: Outputs the contents of /.
-
-5. hadoop fs -mkdir /abc
-Creates directory /abc in HDFS.
-Expected: /abc directory created.
-
-6. hadoop fs -mkdir -p /abc
-Creates directory only if not already present.
-Expected: No error, even if /abc already exists.
-
-7. hadoop fs -touchz /abc/sies.txt
-Creates an empty file sies.txt in /abc.
-Expected: File gets created.
-
-8. gedit sies.txt
-Opens local file in text editor (not an HDFS command).
-Expected: File opens for editing.
-
-9. hadoop fs -copyFromLocal abc.txt /abc/abc1.txt
-Copies local abc.txt to HDFS as abc1.txt.
-Expected: /abc/abc1.txt created in HDFS.
-
-10. hadoop fs -cat /abc/abc1.txt
-Displays the content of abc1.txt.
-Expected: Text inside the file is shown.
-
-11. hadoop fs -put abc.txt /abc/abc2.txt
-Uploads abc.txt to HDFS as abc2.txt.
-Expected: /abc/abc2.txt created.
-
-12. hadoop fs -appendToFile abc.txt sies.txt check.txt
-Appends the contents of sies.txt into abc.txt and writes as check.txt.
-Expected: New file check.txt created with combined content.
-
-13. hadoop fs -usage ls
-Shows the usage guide for the ls command.
-Expected: Syntax and options for Hadoop ls command displayed.
-
-
-//2-WordCount.java
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-
-import java.io.IOException;
-
-public class WordCount {
-
-    public static class TokenizerMapper extends Mapper<Object, Text, Text, IntWritable> {
-        private final static IntWritable one = new IntWritable(1);
-        private Text word = new Text();
-
-        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
-            // Split the line into words using whitespace as the delixxmiter
-            String[] words = value.toString().split("\\s+");Downloads
-            for (String w : words) {
-                word.set(w);
-                context.write(word, one);
-            }
+INSERT INTO Book (book_id, book_name, author) VALUES
+(1, 'Introduction to Java', 'Herbert Schildt'),
+(2, 'Database Systems', 'Ramakrishnan');
+
+-- create electric bill DB and table
+CREATE DATABASE IF NOT EXISTS Electric_Bill;
+USE Electric_Bill;
+CREATE TABLE IF NOT EXISTS Bill (
+  consumer_name VARCHAR(255),
+  bill_due_date DATE,
+  bill_amount DOUBLE
+);
+
+INSERT INTO Bill (consumer_name, bill_due_date, bill_amount) VALUES
+('Alice', '2025-12-05', 1250.50),
+('Bob', '2025-12-10', 980.75);
+
+```
+# Compile
+javac -cp .;lib\mysql-connector-java-8.0.33.jar *.java
+
+#  Run Server
+java -cp .;lib\mysql-connector-java-8.0.33.jar DatabaseServer
+
+# Run Client
+java -cp . DatabaseClient
+
+# Output
+```
+Available Books:
+ID: 1, Name: Introduction to Java, Author: Herbert Schildt
+ID: 2, Name: Database Systems, Author: Ramakrishnan
+
+Pending Bills:
+Consumer: Alice, Due Date: 2025-12-05, Amount: Rs. 1250.5
+Consumer: Bob, Due Date: 2025-12-10, Amount: Rs. 980.75
+```
+
+# 5-MutualExclusion
+
+# TokenRingMain.java
+```java
+import java.util.Scanner;
+
+class TokenRing {
+    private int n; 
+    private boolean[] state; 
+    private int token; 
+
+    public TokenRing(int n) {
+        this.n = n;
+        this.state = new boolean[n];
+        this.token = 0;
+        state[token] = true;
+    }
+
+    public void requestCS(int processId) {
+        if (processId == token) {
+            System.out.println("Process " + processId + " has entered the Critical Section.");
+            releaseCS(processId);
+        } else {
+            System.out.println("Process " + processId + " requested CS but does not have token.");
         }
     }
 
-    public static class IntSumReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
-        private IntWritable result = new IntWritable();
-
-        public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
-            int sum = 0;
-            for (IntWritable val : values) {
-                sum += val.get();
-            }
-            result.set(sum);
-            context.write(key, result);
-        }
-    }
-
-    public static void main(String[] args) throws Exception {
-        Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "word count");
-        job.setJarByClass(WordCount.class);
-        job.setMapperClass(TokenizerMapper.class);
-        job.setCombinerClass(IntSumReducer.class);
-        job.setReducerClass(IntSumReducer.class);
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    private void releaseCS(int processId) {
+        System.out.println("Process " + processId + " is leaving Critical Section.");
+        state[processId] = false;
+        token = (processId + 1) % n;
+        state[token] = true;
+        System.out.println("Token passed to Process " + token + "\n");
     }
 }
 
-1.	hadoop com.sun.tools.javac.Main WordCount.java
-2.	jar cvf wordcount.jar WordCount*.class
-3.	echo "Hello Hadoop Hello World" > input.txt
-echo "This is a test file for WordCount example" >> input.txt echo "Hadoop MapReduce is fun!" >> input.txt
-4.	hadoop fs -mkdir -p /input/wcip
-5.	hadoop fs -copyFromLocal input.txt /input/wcip/
-6.	hadoop fs -rm -r /output
-7.	hadoop jar wordcount.jar WordCount /input/wcip /output
-8.	hadoop fs -ls /output
-9.	hadoop fs -cat /output/part-r-00000
+public class TokenRingMain {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
 
-//3-Map.java
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Mapper;
-import java.io.IOException;
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+        TokenRing ring = new TokenRing(n);
 
-public class Map extends org.apache.hadoop.mapreduce.Mapper<LongWritable, Text, Text, Text> {
-
-    @Override
-    public void map(LongWritable key, Text, value, Context context) throws IOException, InterruptedException {
-
-        Configuration conf = context.getConfiguration();
-        int m = Integer.parseInt(conf.get("m"));
-        int p = Integer.parseInt(conf.get("p"));
-        String line = value.toString();
-
-        // (M, i, j, Mij)
-        String[] indicesAndValue = line.split(",");
-        Text outputKey = new Text();
-        Text outputValue = new Text();
-        if (indicesAndValue[0].equals("M")) {
-            for (int k = 0; k < p; k++){
-                // outputKey.set(i, k)
-                outputKey.set(indicesAndValue[1] + "," + k);
-                // outputValue.set(M, j, Mij);
-                outputValue.set(indicesValue[0] + "," + indicesValue[2] + "," + indicesAndValue[3]);
-                context.write(outputKey, outputvalue);
+        while (true) {
+            System.out.print("Enter process id to request CS (-1 to exit): ");
+            int id = sc.nextInt();
+            if (id == -1) break;
+            if (id >= n) {
+                System.out.println("Invalid process id!");
+                continue;
             }
-        
+            ring.requestCS(id);
         }
-
-        else{
-            // (N, j, k, Njk);
-            for (int i = 0; i < m; i++){
-                outputKey.set(i + "," + indicesAndValue[2]);
-                outputValue.set("N," + indicesAndValue[1] + "," + indicesAndValue[3]);
-                context.write(outputKye, outputValue);
-            }
-        }
+        sc.close();
     }
 }
 
-Reduce.java
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Reducer;
-import java.io.IoException;
-import java.util.Hashmap;
+```
+# Output
+```
+Enter number of processes: 3
+Enter process id to request CS (-1 to exit): 0
+Process 0 has entered the Critical Section.
+Process 0 is leaving Critical Section.
+Token passed to Process 1
 
-public class Reduce extends org.apache.hadoop.mapreduce.Reducer<Text, Text, Text, Text> {
+Enter process id to request CS (-1 to exit): 2
+Process 2 requested CS but does not have token.
+Enter process id to request CS (-1 to exit): 1
+Process 1 has entered the Critical Section.
+Process 1 is leaving Critical Section.
+Token passed to Process 2
 
-    @Override
-    public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException{
-        String[] value;
-        // key = (i, k)
-        // values = [(M/N, j V/W), ...]
-        HashMap<Integer, Float> hashA = new HashMap<Integer, Float>();
-        HashMap<Integer, Float> hashB = new HashMap<Integer, Float>();
-        
-        for (Text val: values){
-            value = val.toString().split(",");
-            if (value[0].equals("M")) {
-                hashA.put(Integer.parseInt(value[1]), Float.parseFloat(value[2])));
+Enter process id to request CS (-1 to exit): -1
+```
+
+# ElectionMain.java
+```java
+import java.util.Scanner;
+class Election {
+    private int n;
+    private boolean[] active;
+    public Election(int n) {
+        this.n = n;
+        this.active = new boolean[n];
+        for (int i = 0; i < n; i++) {
+            active[i] = true; 
+        }
+    }
+    public void holdElection(int initiator) {
+        System.out.println("Election initiated by Process " + initiator);
+        int newCoordinator = -1;
+
+        for (int i = initiator + 1; i < n; i++) {
+            if (active[i]) {
+                System.out.println("Process " + i + " responds OK.");
+                newCoordinator = i;
             }
-            else {
-                hashB.put(Integer.parseInt(value[1]), Float.parseFloat(value[2])));
-            }
         }
-        
-        int n = Integer.parseInt(context.getConfiguration().get("n"));
-        float result = 0.0f;
-        float m_ij;
-        float n_jk;
-
-        for (int j = 0; j < n; j ++) {
-            m_ij = hashA.containsKey(j) ? hashA.get(j) : 0.0f;
-            n_jk = hashB = containsKye(j) ? hashB.get(j) : 0.0f;
-            result += m_ij * n_jk;
+        if (newCoordinator == -1) {
+            newCoordinator = initiator;
         }
 
-        if (result != 0.0f) {
-            context.write(null, new Text(key.toString() + "," + Float.toString(result)));
-        }
-    
+        announceCoordinator(newCoordinator);
+    }
+    private void announceCoordinator(int coord) {
+        System.out.println("Process " + coord + " is the new Coordinator!\n");
+    }
+    public void failProcess(int id) {
+        active[id] = false;
+        System.out.println("Process " + id + " has failed."); }
+    public void recoverProcess(int id) {
+        active[id] = true;
+        System.out.println("Process " + id + " has recovered.");
+    }}
+public class ElectionMain {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+        Election e = new Election(n);
+        while (true) {
+            System.out.print("\n1. Start Election\n2. Fail Process\n3. Recover Process\n4. Exit\nEnter choice: ");
+            int choice = sc.nextInt();
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter initiator process id: ");
+                    int id = sc.nextInt();
+                    e.holdElection(id);
+                    break;
+                case 2:
+                    System.out.print("Enter process id to fail: ");
+                    e.failProcess(sc.nextInt());
+                    break;
+                case 3:
+                    System.out.print("Enter process id to recover: ");
+                    e.recoverProcess(sc.nextInt());
+                    break;
+                case 4:
+                    sc.close();
+                    return;
+                default:
+                    System.out.println("Invalid choice!");
+            } 
+        } 
     }
 }
 
-MatrixMultiply.java
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapreduce.*;
-import org.apache.hadoop.mapreduce.lib.input.*;
-import org.apache.hadoop.mapreduce.lib.output.*;
+```
+# Output
+```
+Enter number of processes: 3
 
-public class MatrixMultiply {
+1. Start Election
+2. Fail Process
+3. Recover Process
+4. Exit
+Enter choice: 1
+Enter initiator process id: 1
+Election initiated by Process 1
+Process 2 responds OK.
+Process 2 is the new Coordinator!
 
-    public static void main(String[] args) throws Exception {
-        
-        if (args.length != 2) {
+1. Start Election
+2. Fail Process
+3. Recover Process
+4. Exit
+Enter choice: 2
+Enter process id to fail: 1
+Process 1 has failed.
 
-            System.err.println("Usage: Matrix Multiply <in_dir> <out_dir>");
-            System.exit(2);
-        }
-        Configuration conf = new Configuration();
-        
-        // M is an m x n Matrix; N is an n x p matrix
-        conf.set("m", "1000");
-        conf.set("n", "100");
-        conf.set("p", "1000");
-        
-        @SuppressWarnings("deprecation")
-        Job job = new Job(conf, "MatrixMultiply");
-        job.setJarByClass(MatrixMultiply.class);
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(Text.class);
-        job.setMapperClass(Map.class);
-        job.setReducerClass(Reduce.class);
+1. Start Election
+2. Fail Process
+3. Recover Process
+4. Exit
+Enter choice: 1
+Enter initiator process id: 0
+Election initiated by Process 0
+Process 2 responds OK.
+Process 2 is the new Coordinator!
 
-        job.setInputFormatClass(TextInputFormat.class);
-        job.setOutputFormatClass(TextOutputFormat.class);
+1. Start Election
+2. Fail Process
+3. Recover Process
+4. Exit
+Enter choice: 2
+Enter process id to fail: 2
+Process 2 has failed.
+```
 
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
-        job.waitForCompletion(true);
-        
-    }
-}
+## 6-Concept: Implementation of Cloud Computing Services
+
+Cloud Computing provides different services such as:
+
+* SaaS (Software as a Service)
+* PaaS (Platform as a Service)
+* IaaS (Infrastructure as a Service)
+* Storage as a Service
+* And many more…
+
+Storage as a Service is a business model in which a large company rents space in its storage infrastructure to a smaller company or individual.
+
+## Implementation of Storage as a Service using Google Docs
+
+### Google Service (SaaS):
+
+* Google Docs
+
+### Steps:
+
+* Click on Blank in Google Docs and proceed with your documentation.
+* You can manage your document’s access through Share → Access Management.
+* Set permission as Viewer / Commenter / Editor.
+
+## Concept: Implementation of Identity Management using Cloud Computing
+
+Identity Management ensures that only authenticated and authorized users can access specific applications, systems, or IT environments.
+
+## Implementation of Identity Management using AWS IAM
+
+You can manage access in AWS using IAM users.
+IAM allows restricting access for each user.
+
+### Steps:
+
+* Click on IAM user in AWS.
+* Go to Users under Access Management → click Create User.
+* Provide the User Name.
+
+### Set Permissions:
+
+* Select Add user to group.
+* Click Create Group.
+* Choose access permissions (e.g., Read-only access).
+
+The user will now be part of the created group (e.g., ReadManage). You can modify access later if needed.
+
+* Create the user.
+
+### Enable Console Access:
+
+* Go to Users → select the user.
+* Open Security Credentials.
+* Click Enable Console Access.
+* Provide autogenerated or custom password.
+
+### Download Credentials:
+
+* Download the .csv credentials file.
+* This contains the username and password.
+* Keep it secure.
+
+### Cleanup:
+
+* Remove the user from the group when no longer needed.
+* Delete the IAM user from Access Management.
+
+
+# Assignment 7 – Virtual Machine Creation
+
+## Create a Virtual Machine (VM) on a Cloud Provider
+
+Create a virtual machine (VM) on any cloud provider (AWS / Azure / GCP) with the following specifications:
+
+* Operating System
+* VM Type
+* Disk Size
+* Public IP
+* Network Rules
+
+Once created, verify that the VM is running and include a screenshot of the instance details along with a brief description of the steps followed.
+
+---
+
+## Solution
+
+I am creating a virtual machine using the cloud provider AWS. AWS uses EC2 instances for creating virtual machines.
+
+---
+
+## Steps to Create a Virtual Machine Using AWS EC2
+
+### Step 1: Select EC2 in AWS
+
+Open AWS Management Console and search for **EC2**.
+
+### Step 2: Open EC2 Instances
+
+Click on **Instances** under the Instances section in EC2.
+
+### Step 3: Launch a New Instance
+
+* Click **Launch Instances** to create a new Virtual Machine (Free Tier).
+* Give a **name tag** to your instance.
+* Select the instance type (ensure it’s Free Tier eligible or choose a paid option if you prefer).
+* Create a **Key Pair** for secure login (used for SSH access).
+* Configure network settings during instance creation or modify them later.
+* Configure the **storage size** carefully (larger storage increases cost).
+* Under **Advanced Settings**, you can add startup scripts or project-specific configurations.
+
+### Step 4: Launch the Instance
+
+Click **Launch Instance**.
+
+Go to the **EC2 Dashboard** → **Instances** to verify that the instance is running.
+
+### Step 5: Terminating the Instance (If No Longer Needed)
+
+If the instance is not in use:
+
+* Select the instance.
+* Click **Instance State**.
+* Choose **Terminate** to delete it from the EC2 dashboard.
+
+---
+
+## Install Virtual Box / VMware / Equivalent Workstation
+
+Install a local virtualization tool to run different Linux or Windows operating systems on top of Windows 8 or above.
+
+### Step 1: Open VMware Workstation
+
+Launch VMware Workstation Player.
+Click **Create a New Virtual Machine**.
+
+### Step 2: Select Installer
+
+* Choose **Installer disc image file (ISO)**.
+* Browse and select your Ubuntu ISO file.
+* Click **Next**.
+
+### Step 3: Configure the Virtual Machine
+
+* VM Name: Ubuntu-VM (or any preferred name).
+* Location: Use default or choose another folder.
+* Disk Size: 20 GB (adjust according to your requirement).
+* Disk Type: Store as a single file or split into multiple files.
+* Click **Next**, then **Finish**.
+
+### Step 5: Start the VM
+
+* Select your virtual machine.
+* Click **Play virtual machine**.
+* Ubuntu will boot from the ISO.
+* Follow the installation instructions to complete OS setup.
+
+---
